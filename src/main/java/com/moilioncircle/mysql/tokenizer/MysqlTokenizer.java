@@ -31,6 +31,9 @@ public class MysqlTokenizer {
 
     private TokenTag tag;
 
+    private Pos startPos;
+    private Pos endPos;
+
     private StringBuilder value = new StringBuilder();
 
     public MysqlTokenizer(char[] chars) {
@@ -42,12 +45,14 @@ public class MysqlTokenizer {
         loop:
         while (true) {
             char c = current();
+            startPos = newPos();
             switch (c) {
                 case 'a':
                 case 'b':
                     if (lookahead('\'')) {
                         scanBit();
                         tag = TokenTag.BIT;
+                        next();
                         break loop;
                     }
                 case 'c':
@@ -75,6 +80,7 @@ public class MysqlTokenizer {
                     if (lookahead('\'')) {
                         scanHex();
                         tag = TokenTag.HEX;
+                        next();
                         break loop;
                     }
                 case 'y':
@@ -84,6 +90,7 @@ public class MysqlTokenizer {
                     if (lookahead('\'')) {
                         scanBit();
                         tag = TokenTag.BIT;
+                        next();
                         break loop;
                     }
                 case 'C':
@@ -111,26 +118,45 @@ public class MysqlTokenizer {
                     if (lookahead('\'')) {
                         scanHex();
                         tag = TokenTag.HEX;
+                        next();
                         break loop;
                     }
                 case 'Y':
                 case 'Z':
+                case '_':
                     scanIdent();
+                    Optional<TokenTag> tagOpt = lookupKeywords(value.toString());
+                    if (tagOpt.isPresent()) {
+                        tag = tagOpt.get();
+                    } else {
+                        tag = TokenTag.IDENT;
+                    }
                     break loop;
                 case '`':
                     scanEscapedIdent();
                     tag = TokenTag.IDENT;
+                    next();
                     break loop;
                 case '\'':
                     scanString(current());
                     tag = TokenTag.STRING;
+                    next();
                     break loop;
                 case '"':
                     scanString(current());
                     tag = TokenTag.STRING;
+                    next();
                     break loop;
                 case '+':
+                    tag = TokenTag.PLUS;
+                    value.append(current());
+                    next();
+                    break loop;
                 case '-':
+                    tag = TokenTag.MINUS;
+                    value.append(current());
+                    next();
+                    break loop;
                 case '0':
                 case '1':
                 case '2':
@@ -141,32 +167,35 @@ public class MysqlTokenizer {
                 case '7':
                 case '8':
                 case '9':
-                case '.':
                     scanNumber();
                     tag = TokenTag.NUMBER;
+                    break loop;
+                case '.':
+                    if (lookahead1('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+                        scanFractionNumber();
+                        tag = TokenTag.NUMBER;
+                    } else {
+                        tag = TokenTag.DOT;
+                        value.append(current());
+                        next();
+                    }
                     break loop;
                 case '\n':
                 case '\b':
                 case '\r':
                 case '\t':
                 case '\f':
+                case ' ':
+                    next();
                     continue;
+                case 0x1a:
+                    tag = TokenTag.EOF;
+                    break loop;
+
             }
 
         }
-        return new Token(tag, value.toString());
-    }
-
-    private void scanEscapedIdent() {
-        while (next() != '`') {
-            if (current() == 0x1a) {
-                reportLexerError("Un-close ident.");
-            } else {
-                value.append(current());
-            }
-
-        }
-
+        return new Token(tag, value.toString(), startPos, newPos());
     }
 
     private void scanBit() {
@@ -175,13 +204,9 @@ public class MysqlTokenizer {
             if (current() == '0' || current() == '1') {
                 value.append(current());
             } else {
-                reportLexerError("invalid bit number.");
+                reportLexerError("Invalid bit number.");
             }
         }
-    }
-
-    private void reportLexerError(String message) {
-        throw new RuntimeException(message);
     }
 
     private void scanHex() {
@@ -190,7 +215,7 @@ public class MysqlTokenizer {
             if ((current() >= '0' && current() <= '9') || (current() >= 'a' && current() <= 'f') || (current() >= 'A' && current() <= 'F')) {
                 value.append(current());
             } else {
-                reportLexerError("invalid hex number.");
+                reportLexerError("Invalid hex number.");
             }
         }
     }
@@ -198,38 +223,23 @@ public class MysqlTokenizer {
     private void scanIdent() {
         loop:
         while (true) {
-            switch (current()) {
-                case 0x1a:
-                    break loop;
-                case '.':
-                case '\n':
-                case '\b':
-                case '\r':
-                case '\t':
-                case '\f':
-                    break loop;
-                default:
-                    value.append(current());
-                    break;
+            if ((current() >= 'a' && current() <= 'z') || (current() >= 'A' && current() <= 'Z') || (current() >= '0' && current() <= '9') || current() == '_') {
+                value.append(current());
+                next();
+            } else {
+                break;
             }
-            next();
-        }
-        Optional<TokenTag> tagOpt = lookupKeywords(value.toString());
-        if (tagOpt.isPresent()) {
-            tag = tagOpt.get();
-        } else {
-            tag = TokenTag.IDENT;
         }
     }
 
-    private Optional<TokenTag> lookupKeywords(String str) {
-        TokenTag[] tags = TokenTag.values();
-        for (TokenTag tag : tags) {
-            if (tag.type == TokenType.KEYWORDS && str.equalsIgnoreCase(tag.tagName)) {
-                return Optional.of(tag);
+    private void scanEscapedIdent() {
+        while (next() != '`') {
+            if (current() == 0x1a) {
+                reportLexerError("Un-closed ident.");
+            } else {
+                value.append(current());
             }
         }
-        return Optional.empty();
     }
 
     private void scanString(char quoteChar) {
@@ -244,10 +254,10 @@ public class MysqlTokenizer {
                     break;
                 }
             } else if (current() == 0x1a) {
-                reportLexerError("un-close String.");
+                reportLexerError("Un-closed String.");
                 break;
             } else if (current() == '\\') {
-                if (lookahead('\\') || lookahead('\'') || lookahead('"') || lookahead('b') || lookahead('n') || lookahead('r') || lookahead('t') || lookahead('Z') || lookahead('0') || lookahead('_') || lookahead('%')) {
+                if (lookahead1('\\', '\'', '"', 'b', 'n', 'r', 't', 'Z', '0', '_', '%')) {
                     next();
                     switch (current()) {
                         case '\\':
@@ -296,15 +306,82 @@ public class MysqlTokenizer {
     }
 
     private void scanNumber() {
-        while (true) {
-            switch (current()) {
-
-            }
+        while (isDigit(current())) {
+            value.append(current());
             next();
+        }
+        switch (current()) {
+            case '.':
+                if (lookahead1('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+                    scanFractionNumber();
+                    break;
+                } else {
+                    reportLexerError("Invalid number.");
+                }
+
+            case 'E':
+            case 'e':
+                if (lookahead1('+', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+                    scanScientificNumber();
+                } else {
+                    reportLexerError("Invalid number.");
+                }
+                break;
         }
     }
 
+    private void scanFractionNumber() {
+        value.append(current());
+        next();
+        while (isDigit(current())) {
+            value.append(current());
+            next();
+        }
+        switch (current()) {
+            case 'E':
+            case 'e':
+                if (lookahead1('+', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+                    scanScientificNumber();
+                } else {
+                    reportLexerError("Invalid number.");
+                }
+                break;
+
+        }
+
+    }
+
+    private void scanScientificNumber() {
+        value.append(current());
+        next();
+        if (current() == '+' || current() == '-') {
+            value.append(current());
+            next();
+        }
+        if (isDigit(current())) {
+            while (isDigit(current())) {
+                value.append(current());
+                next();
+            }
+        } else {
+            reportLexerError("Invalid number.");
+        }
+
+    }
+
+    private boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
     private char next() {
+        switch (current()) {
+            case '\n':
+                newLine();
+                break;
+            default:
+                column++;
+        }
+
         index++;
         if (index < chars.length) {
             return chars[index];
@@ -331,10 +408,46 @@ public class MysqlTokenizer {
         return true;
     }
 
+    private boolean lookahead1(char... aheads) {
+        for (char ahead : aheads) {
+            if (lookahead(ahead)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Optional<TokenTag> lookupKeywords(String str) {
+        TokenTag[] tags = TokenTag.values();
+        for (TokenTag tag : tags) {
+            if (tag.type == TokenType.KEYWORDS && str.equalsIgnoreCase(tag.tagName)) {
+                return Optional.of(tag);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private void reportLexerError(String message) {
+        throw new RuntimeException(message);
+    }
+
+    private void newLine() {
+        row++;
+        column = 0;
+    }
+
+    private Pos newPos() {
+        return new Pos(row, column);
+    }
+
     public static void main(String[] args) {
-        String bit = "Null";
-        MysqlTokenizer tokenizer = new MysqlTokenizer(bit.toCharArray());
+        String num = "abc . \r\n`abc`";
+        MysqlTokenizer tokenizer = new MysqlTokenizer(num.toCharArray());
         Token token = tokenizer.nextToken();
         System.out.println(token);
+        while (token.tag != TokenTag.EOF) {
+            token = tokenizer.nextToken();
+            System.out.println(token);
+        }
     }
 }

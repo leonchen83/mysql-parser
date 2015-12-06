@@ -1,8 +1,5 @@
 package com.moilioncircle.mysql.tokenizer;
 
-import static com.moilioncircle.mysql.tokenizer.TokenType.DEFAULT;
-import static com.moilioncircle.mysql.tokenizer.TokenType.KEYWORDS;
-
 /**
  * Copyright leon
  * <p>
@@ -20,14 +17,17 @@ import static com.moilioncircle.mysql.tokenizer.TokenType.KEYWORDS;
  *
  * @author leon on 15-12-6
  */
-public enum TokenTag {
-    HEX("HEX", DEFAULT), BIT("BIT", DEFAULT), IDENT("IDENT", DEFAULT), STRING("STRING", DEFAULT), TRUE("TRUE", KEYWORDS), FALSE("FALSE", KEYWORDS), NULL("NULL", KEYWORDS), NUMBER("NUMBER", KEYWORDS),
-    DOT("DOT", KEYWORDS), PLUS("PLUS", KEYWORDS), MINUS("MINUS", KEYWORDS),EOF("EOF",DEFAULT);
-    public String tagName;
-    public TokenType type;
+public class Pos {
+    public int row;
+    public int column;
 
-    TokenTag(String tagName, TokenType type) {
-        this.tagName = tagName;
-        this.type = type;
+    public Pos(int row, int column) {
+        this.row = row;
+        this.column = column;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + row + "," + column + ")";
     }
 }

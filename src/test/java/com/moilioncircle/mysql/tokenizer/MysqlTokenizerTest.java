@@ -48,25 +48,25 @@ public class MysqlTokenizerTest extends TestCase {
     }
 
     @Test
-    public void testScanHex(){
+    public void testScanHex() {
         String bit = "X'0AF'";
         MysqlTokenizer tokenizer = new MysqlTokenizer(bit.toCharArray());
         Token token = tokenizer.nextToken();
         assertEquals("0AF", token.value);
         assertEquals(TokenTag.HEX, token.tag);
 
-        try{
+        try {
             bit = "X'0AF";
             tokenizer = new MysqlTokenizer(bit.toCharArray());
             tokenizer.nextToken();
             fail();
-        }catch (RuntimeException e){
-            assertEquals("invalid hex number.",e.getMessage());
+        } catch (RuntimeException e) {
+            assertEquals("Invalid hex number.", e.getMessage());
         }
     }
 
     @Test
-    public void testScanIdent(){
+    public void testScanIdent() {
         String bit = "abc1231.23esfs";
         MysqlTokenizer tokenizer = new MysqlTokenizer(bit.toCharArray());
         Token token = tokenizer.nextToken();
@@ -78,5 +78,65 @@ public class MysqlTokenizerTest extends TestCase {
         token = tokenizer.nextToken();
         assertEquals("1.23e5", token.value);
         assertEquals(TokenTag.IDENT, token.tag);
+    }
+
+    @Test
+    public void testScanNumber() {
+        String num = "1.2e+5+6";
+        MysqlTokenizer tokenizer = new MysqlTokenizer(num.toCharArray());
+        Token token = tokenizer.nextToken();
+        assertEquals("1.2e+5", token.value);
+        assertEquals(TokenTag.NUMBER, token.tag);
+
+        num = "1.2e+56";
+        tokenizer = new MysqlTokenizer(num.toCharArray());
+        token = tokenizer.nextToken();
+        assertEquals("1.2e+56", token.value);
+        assertEquals(TokenTag.NUMBER, token.tag);
+
+        num = "1.256";
+        tokenizer = new MysqlTokenizer(num.toCharArray());
+        token = tokenizer.nextToken();
+        assertEquals("1.256", token.value);
+        assertEquals(TokenTag.NUMBER, token.tag);
+
+        num = "1256";
+        tokenizer = new MysqlTokenizer(num.toCharArray());
+        token = tokenizer.nextToken();
+        assertEquals("1256", token.value);
+        assertEquals(TokenTag.NUMBER, token.tag);
+
+        num = ".256";
+        tokenizer = new MysqlTokenizer(num.toCharArray());
+        token = tokenizer.nextToken();
+        assertEquals(".256", token.value);
+        assertEquals(TokenTag.NUMBER, token.tag);
+
+        try {
+            num = ".2E";
+            tokenizer = new MysqlTokenizer(num.toCharArray());
+            tokenizer.nextToken();
+            fail();
+        } catch (RuntimeException e) {
+            assertEquals("Invalid number.", e.getMessage());
+        }
+
+        try {
+            num = "0.E5";
+            tokenizer = new MysqlTokenizer(num.toCharArray());
+            tokenizer.nextToken();
+            fail();
+        } catch (RuntimeException e) {
+            assertEquals("Invalid number.", e.getMessage());
+        }
+
+        try {
+            num = "1.24e+";
+            tokenizer = new MysqlTokenizer(num.toCharArray());
+            tokenizer.nextToken();
+            fail();
+        } catch (RuntimeException e) {
+            assertEquals("Invalid number.", e.getMessage());
+        }
     }
 }

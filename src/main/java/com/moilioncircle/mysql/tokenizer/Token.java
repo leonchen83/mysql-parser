@@ -20,10 +20,14 @@ package com.moilioncircle.mysql.tokenizer;
 public class Token {
     public TokenTag tag;
     public String value;
+    public Pos startPos;
+    public Pos endPos;
 
-    public Token(TokenTag tag, String value) {
+    public Token(TokenTag tag, String value,Pos startPos,Pos endPos) {
         this.tag = tag;
         this.value = value;
+        this.startPos = startPos;
+        this.endPos = endPos;
     }
 
     @Override
@@ -31,6 +35,8 @@ public class Token {
         return "Token{" +
                 "tag=" + tag +
                 ", value='" + value + '\'' +
+                ", startPos=" + startPos +
+                ", endPos=" + endPos +
                 '}';
     }
 }
