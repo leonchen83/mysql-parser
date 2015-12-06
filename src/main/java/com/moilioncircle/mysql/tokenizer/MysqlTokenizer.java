@@ -32,7 +32,6 @@ public class MysqlTokenizer {
     private TokenTag tag;
 
     private Pos startPos;
-    private Pos endPos;
 
     private StringBuilder value = new StringBuilder();
 
@@ -179,6 +178,11 @@ public class MysqlTokenizer {
                         value.append(current());
                         next();
                     }
+                    break loop;
+                case ',':
+                    tag = TokenTag.COMMA;
+                    value.append(current());
+                    next();
                     break loop;
                 case '\n':
                 case '\b':
@@ -441,7 +445,7 @@ public class MysqlTokenizer {
     }
 
     public static void main(String[] args) {
-        String num = "abc . \r\n`abc`";
+        String num = "drop TEMPORARY table if exists abc,bcd RESTRICT";
         MysqlTokenizer tokenizer = new MysqlTokenizer(num.toCharArray());
         Token token = tokenizer.nextToken();
         System.out.println(token);
