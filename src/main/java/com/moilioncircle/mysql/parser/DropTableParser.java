@@ -71,11 +71,4 @@ public class DropTableParser extends AbstractParser {
         return new DropTable(isTemporary, ifExists, restrict, cascade, tables);
     }
 
-    public static void main(String[] args) {
-        String str = "drop Temporary table if exists abc,bcd RESTRICT";
-        MysqlScanner scanner = new MysqlScanner(str.toCharArray());
-        DropTableParser parser = new DropTableParser(scanner);
-        DropTable table = parser.parseDropTable();
-        System.out.println(table);
-    }
 }

@@ -76,4 +76,9 @@ public abstract class AbstractParser {
         scanner.back(token);
     }
 
+    public void acceptN(TokenTag... tags) {
+        for (TokenTag tag : tags) {
+            accept(tag);
+        }
+    }
 }

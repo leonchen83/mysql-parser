@@ -52,11 +52,4 @@ public class RenameTableParser extends AbstractParser {
         return result;
     }
 
-    public static void main(String[] args) {
-        String str = "rename table aa to bb ,cc to dd ";
-        MysqlScanner scanner = new MysqlScanner(str.toCharArray());
-        RenameTableParser parser = new RenameTableParser(scanner);
-        RenameTable table = parser.parseRenameTable();
-        System.out.println(table);
-    }
 }
