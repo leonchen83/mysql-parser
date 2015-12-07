@@ -3,6 +3,8 @@ package com.moilioncircle.mysql.ast;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.moilioncircle.mysql.ast.Pair.pair;
+
 /**
  * Copyright leon
  * <p>
@@ -18,37 +20,31 @@ import java.util.List;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @author leon on 15-12-6
+ * @author leon on 15-12-7
  */
-public class DropTable {
-    private boolean isTemporary;
-    private boolean ifExists;
-    private boolean restrict;
-    private boolean cascade;
-    private List<String> tables = new ArrayList<>();
+public class RenameTable {
+    private List<Pair> pairs = new ArrayList<>();
 
-    public DropTable(boolean isTemporary, boolean ifExists, boolean restrict, boolean cascade, List<String> tables) {
-        this.isTemporary = isTemporary;
-        this.ifExists = ifExists;
-        this.restrict = restrict;
-        this.cascade = cascade;
-        this.tables = tables;
+    public RenameTable(List<Pair> pairs) {
+        this.pairs = pairs;
+    }
+
+    public RenameTable(){
+
+    }
+
+    public void addPair(String tableName,String newTableName){
+        pairs.add(pair(tableName,newTableName));
     }
 
     @Override
     public String toString() {
         //pretty print
         StringBuilder builder = new StringBuilder();
-        builder.append("DROP " + (isTemporary ? "TEMPORARY " : "TABLE ")+ (ifExists?"IF EXISTS ":""));
-        builder.append("\n");
-        tables.forEach(e->builder.append("    "+e+",\n"));
+        builder.append("RENAME TABLE\n");
+        pairs.forEach(e->builder.append("    "+e.toString()+",\n"));
         builder.deleteCharAt(builder.length()-2);
-        if(restrict){
-            builder.append("RESTRICT");
-        }
-        if(cascade){
-            builder.append("CASCADE");
-        }
         return builder.toString();
     }
 }
+

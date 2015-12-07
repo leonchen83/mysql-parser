@@ -61,29 +61,6 @@ public class MysqlScanner {
         tokens.add(0, token);
     }
 
-    public void accept(TokenTag tag) {
-        if (token.tag == tag) {
-            if (token.tag != TokenTag.EOF) {
-                next();
-            }
-        } else {
-            reportSyntaxError("Expected " + tag + " but " + token.tag);
-        }
-    }
-
-    public boolean tokenIs(TokenTag tag) {
-        if (token.tag == tag) {
-            next();
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    protected void reportSyntaxError(String message) {
-        throw new RuntimeException(message);
-    }
-
     public boolean lookahead(TokenTag... tags) {
         for (int i = 0; i < tags.length; i++) {
             if ((i + 1) >= tokens.size() || tokens.get(i + 1).tag != tags[i]) {

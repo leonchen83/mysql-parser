@@ -25,10 +25,10 @@ import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
  *
  * @author leon on 15-12-6
  */
-public class DropTableParser extends MysqlScanner {
+public class DropTableParser extends AbstractParser {
 
-    public DropTableParser(char[] chars) {
-        super(chars);
+    public DropTableParser(MysqlScanner scanner) {
+        super(scanner);
     }
 
     public DropTable parseDropTable() {
@@ -39,25 +39,25 @@ public class DropTableParser extends MysqlScanner {
         List<String> tables = new ArrayList<>();
 
         accept(DROP);
-        if (token.tag == TEMPORARY) {
+        if (token().tag == TEMPORARY) {
             accept(TEMPORARY);
             isTemporary = true;
         }
         accept(TABLE);
-        if (token.tag == IF) {
+        if (token().tag == IF) {
             accept(IF);
             accept(EXISTS);
             ifExists = true;
         }
-        if (token.tag == IDENT) {
+        if (token().tag == IDENT) {
             do {
-                tables.add(token.value);
+                tables.add(token().value);
                 next();
             } while (tokenIs(COMMA));
         } else {
             reportSyntaxError("");
         }
-        switch (token.tag) {
+        switch (token().tag) {
             case RESTRICT:
                 accept(RESTRICT);
                 restrict = true;
@@ -72,10 +72,9 @@ public class DropTableParser extends MysqlScanner {
     }
 
     public static void main(String[] args) {
-        String str = "drop Temporary table if exists abc RESTRICT";
+        String str = "drop Temporary table if exists abc,bcd RESTRICT";
         MysqlScanner scanner = new MysqlScanner(str.toCharArray());
-        System.out.println(scanner.tokens);
-        DropTableParser parser = new DropTableParser(str.toCharArray());
+        DropTableParser parser = new DropTableParser(scanner);
         DropTable table = parser.parseDropTable();
         System.out.println(table);
     }
