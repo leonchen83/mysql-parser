@@ -26,10 +26,14 @@ public class CreateTableParser extends AbstractParser {
     }
 
     public void parseColumnDefinition(){
-
+        //TODO
     }
 
     public void parseReferenceDefinition(){
+        //TODO
+    }
 
+    public void parsePartitionOptions() {
+        //TODO
     }
 }

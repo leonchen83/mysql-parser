@@ -44,7 +44,7 @@ public class AlterTableParser extends AbstractParser {
         while (true) {
             switch (token().tag) {
                 case PARTITION:
-                    parsePartitionOptions();
+                    createTableParser.parsePartitionOptions();
                     accept(EOF);
                     break loop;
                 case EOF:
@@ -66,6 +66,7 @@ public class AlterTableParser extends AbstractParser {
                 parseAddStatment();
                 break;
             //TODO
+//            | table_options
 //            | ALGORITHM [=] {DEFAULT|INPLACE|COPY}
 //            | ALTER [COLUMN] col_name {SET DEFAULT literal | DROP DEFAULT}
 //            | CHANGE [COLUMN] old_col_name new_col_name column_definition
@@ -297,7 +298,4 @@ public class AlterTableParser extends AbstractParser {
         }
     }
 
-    private void parsePartitionOptions() {
-        //TODO
-    }
 }
