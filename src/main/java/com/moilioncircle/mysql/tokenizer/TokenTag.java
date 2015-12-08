@@ -1,5 +1,7 @@
 package com.moilioncircle.mysql.tokenizer;
 
+import com.sun.org.apache.xpath.internal.compiler.Keywords;
+
 import static com.moilioncircle.mysql.tokenizer.TokenType.DEFAULT;
 import static com.moilioncircle.mysql.tokenizer.TokenType.KEYWORDS;
 
@@ -21,7 +23,7 @@ import static com.moilioncircle.mysql.tokenizer.TokenType.KEYWORDS;
  * @author leon on 15-12-6
  */
 public enum TokenTag {
-    HEX("HEX", TokenType.DEFAULT), BIT("BIT", TokenType.DEFAULT), IDENT("IDENT", TokenType.DEFAULT), STRING("STRING", TokenType.DEFAULT), TRUE("TRUE", KEYWORDS), FALSE("FALSE", KEYWORDS), NULL("NULL", KEYWORDS), NUMBER("NUMBER", KEYWORDS),
+    HEX("HEX", TokenType.DEFAULT), BIT("BIT", TokenType.DEFAULT), IDENT("IDENT", TokenType.DEFAULT), STRING("STRING", TokenType.DEFAULT), TRUE("TRUE", KEYWORDS), FALSE("FALSE", KEYWORDS), NULL("NULL", KEYWORDS), NUMBER("NUMBER", TokenType.DEFAULT),
     DOT("DOT", KEYWORDS), PLUS("PLUS", KEYWORDS), MINUS("MINUS", KEYWORDS), EOF("EOF", TokenType.DEFAULT),
     //DROP TABLE
     DROP("DROP", KEYWORDS), TEMPORARY("TEMPORARY", KEYWORDS), TABLE("TABLE", KEYWORDS), IF("IF", KEYWORDS),
@@ -44,8 +46,8 @@ public enum TokenTag {
     OPTIMIZE("OPTIMIZE",KEYWORDS),REBUILD("REBUILD",KEYWORDS),REPAIR("REPAIR",KEYWORDS),
     REMOVE("REMOVE",KEYWORDS),ASC("ASC",KEYWORDS),DESC("DESC",KEYWORDS),USING("USING",KEYWORDS),
     BTREE("BTREE",KEYWORDS),HASH("HASH",KEYWORDS),KEY_BLOCK_SIZE("KEY_BLOCK_SIZE",KEYWORDS),
-    PARSER("PARSER",KEYWORDS),COMMENT("COMMENT",KEYWORDS);
-
+    PARSER("PARSER",KEYWORDS),COMMENT("COMMENT",KEYWORDS),
+    LPAREN("LPAREN",KEYWORDS),RPAREN("RPAREN",KEYWORDS);
     public String tagName;
     public TokenType type;
 

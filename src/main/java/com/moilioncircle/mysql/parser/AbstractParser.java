@@ -59,6 +59,10 @@ public abstract class AbstractParser {
         return scanner.lookahead(tags);
     }
 
+    public boolean lookahead1(TokenTag... tags) {
+        return scanner.lookahead1(tags);
+    }
+
     public Token token() {
         return scanner.token();
     }
@@ -83,5 +87,12 @@ public abstract class AbstractParser {
         for (TokenTag tag : tags) {
             accept(tag);
         }
+    }
+
+    public Token acceptIf(TokenTag tag) {
+        if (token().tag == tag) {
+            return accept(tag);
+        }
+        return null;
     }
 }

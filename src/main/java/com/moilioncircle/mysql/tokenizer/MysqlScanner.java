@@ -70,4 +70,13 @@ public class MysqlScanner {
         return true;
     }
 
+    public boolean lookahead1(TokenTag... tags) {
+        for (TokenTag tag : tags) {
+            if (lookahead(tag)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
