@@ -1,5 +1,8 @@
 package com.moilioncircle.mysql.ast;
 
+import com.moilioncircle.mysql.parser.AbstractParser;
+import com.moilioncircle.mysql.tokenizer.MysqlScanner;
+
 /**
  * Copyright leon
  * <p>
@@ -17,6 +20,9 @@ package com.moilioncircle.mysql.ast;
  *
  * @author leon on 15-12-7
  */
-public class AlterTable {
-    // too late .see you all tomorrow!!
+public class AlterTable extends AbstractParser{
+
+    public AlterTable(MysqlScanner scanner) {
+        super(scanner);
+    }
 }

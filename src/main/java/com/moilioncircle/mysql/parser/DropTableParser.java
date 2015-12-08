@@ -49,14 +49,10 @@ public class DropTableParser extends AbstractParser {
             accept(EXISTS);
             ifExists = true;
         }
-        if (token().tag == IDENT) {
-            do {
-                tables.add(token().value);
-                next();
-            } while (tokenIs(COMMA));
-        } else {
-            reportSyntaxError("");
-        }
+        do {
+            tables.add(accept(IDENT).value);
+        } while (tokenIs(COMMA));
+
         switch (token().tag) {
             case RESTRICT:
                 accept(RESTRICT);

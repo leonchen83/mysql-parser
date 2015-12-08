@@ -17,4 +17,17 @@ public class DropTableParserTest extends TestCase {
                 "RESTRICT",table.toString());
     }
 
+    public void testParseDropTable1(){
+        String str = "drop Temporary table if exists";
+        try{
+            MysqlScanner scanner = new MysqlScanner(str.toCharArray());
+            DropTableParser parser = new DropTableParser(scanner);
+            parser.parseDropTable();
+            fail();
+        }catch (RuntimeException e){
+            assertEquals("Expected IDENT but EOF",e.getMessage());
+        }
+
+    }
+
 }

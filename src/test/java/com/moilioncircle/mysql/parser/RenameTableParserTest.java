@@ -15,4 +15,17 @@ public class RenameTableParserTest extends TestCase {
                 "    aa TO bb,\n" +
                 "    cc TO dd\n",table.toString());
     }
+
+    public void testParseRenameTable1(){
+        String str = "rename table aa ";
+        try{
+            MysqlScanner scanner = new MysqlScanner(str.toCharArray());
+            RenameTableParser parser = new RenameTableParser(scanner);
+            parser.parseRenameTable();
+            fail();
+        }catch (RuntimeException e){
+            assertEquals("Expected TO but EOF",e.getMessage());
+        }
+
+    }
 }

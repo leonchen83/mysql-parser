@@ -29,14 +29,17 @@ public abstract class AbstractParser {
         this.scanner = scanner;
     }
 
-    public void accept(TokenTag tag) {
+    public Token accept(TokenTag tag) {
         if (token().tag == tag) {
             if (token().tag != TokenTag.EOF) {
+                Token temp = token();
                 next();
+                return temp;
             }
         } else {
             reportSyntaxError("Expected " + tag + " but " + token().tag);
         }
+        return null;
     }
 
     public boolean tokenIs(TokenTag tag) {

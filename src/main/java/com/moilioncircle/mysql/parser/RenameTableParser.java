@@ -33,20 +33,10 @@ public class RenameTableParser extends AbstractParser {
         accept(RENAME);
         accept(TABLE);
         do {
-            if (token().tag == IDENT) {
-                String tableName = token().value;
-                next();
-                accept(TO);
-                if (token().tag == IDENT) {
-                    String newTableName = token().value;
-                    next();
-                    result.addPair(tableName, newTableName);
-                } else {
-                    reportSyntaxError("Expected IDENT but " + token().tag);
-                }
-            } else {
-                reportSyntaxError("Expected IDENT but " + token().tag);
-            }
+            String tableName = accept(IDENT).value;
+            accept(TO);
+            String newTableName = accept(IDENT).value;
+            result.addPair(tableName, newTableName);
         } while (tokenIs(COMMA));
         accept(EOF);
         return result;
