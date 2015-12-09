@@ -3,6 +3,9 @@ package com.moilioncircle.mysql.parser;
 import com.moilioncircle.mysql.ast.AlterTable;
 import com.moilioncircle.mysql.tokenizer.MysqlScanner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
 
 /**
@@ -39,7 +42,7 @@ public class AlterTableParser extends AbstractParser {
         }
         acceptIf(IGNORE);
         accept(TABLE);
-
+        String tableName = accept(IDENT).value;
         loop:
         while (true) {
             switch (token().tag) {
@@ -65,41 +68,223 @@ public class AlterTableParser extends AbstractParser {
             case ADD:
                 parseAddStatment();
                 break;
-            //TODO
-//            | table_options
-//            | ALGORITHM [=] {DEFAULT|INPLACE|COPY}
-//            | ALTER [COLUMN] col_name {SET DEFAULT literal | DROP DEFAULT}
-//            | CHANGE [COLUMN] old_col_name new_col_name column_definition
-//                    [FIRST|AFTER col_name]
-//            | LOCK [=] {DEFAULT|NONE|SHARED|EXCLUSIVE}
-//            | MODIFY [COLUMN] col_name column_definition
-//            [FIRST | AFTER col_name]
-//            | DROP [COLUMN] col_name
-//                    | DROP PRIMARY KEY
-//            | DROP {INDEX|KEY} index_name
-//                    | DROP FOREIGN KEY fk_symbol
-//                    | DISABLE KEYS
-//                    | ENABLE KEYS
-//                    | RENAME [TO|AS] new_tbl_name
-//                    | ORDER BY col_name [, col_name] ...
-//            | CONVERT TO CHARACTER SET charset_name [COLLATE collation_name]
-//            | [DEFAULT] CHARACTER SET [=] charset_name [COLLATE [=] collation_name]
-//            | DISCARD TABLESPACE
-//            | IMPORT TABLESPACE
-//            | FORCE
-//                    | ADD PARTITION (partition_definition)
-//                    | DROP PARTITION partition_names
-//            | TRUNCATE PARTITION {partition_names | ALL}
-//            | COALESCE PARTITION number
-//                    | REORGANIZE PARTITION partition_names INTO (partition_definitions)
-//                    | EXCHANGE PARTITION partition_name WITH TABLE tbl_name
-//                    | ANALYZE PARTITION {partition_names | ALL}
-//            | CHECK PARTITION {partition_names | ALL}
-//            | OPTIMIZE PARTITION {partition_names | ALL}
-//            | REBUILD PARTITION {partition_names | ALL}
-//            | REPAIR PARTITION {partition_names | ALL}
-//            | REMOVE PARTITIONING
+            case ALGORITHM:
+                accept(ALGORITHM);
+                acceptIf(EQUAL);
+                acceptOr(DEFAULT, INPLACE, COPY);
+                break;
+            case ALTER:
+                accept(ALTER);
+                acceptIf(COLUMN);
+                String colName = accept(IDENT).value;
+                if (token().tag == SET) {
+                    acceptN(SET, DEFAULT);
+                    String literal = accept(STRING).value;
+                } else {
+                    acceptN(DROP, DEFAULT);
+                }
+                break;
+            case CHANGE:
+                accept(CHANGE);
+                acceptIf(COLUMN);
+                String oldColumnName = accept(IDENT).value;
+                String newColumnName = accept(IDENT).value;
+                createTableParser.parseColumnDefinition();
+                if (token().tag == FIRST) {
+                    accept(FIRST);
+                } else if (token().tag == AFTER) {
+                    accept(AFTER);
+                    colName = accept(IDENT).value;
+                }
+                break;
+            case LOCK:
+                //LOCK [=] {DEFAULT|NONE|SHARED|EXCLUSIVE}
+                accept(LOCK);
+                acceptIf(EQUAL);
+                acceptOr(DEFAULT, NONE, SHARED, EXCLUSIVE);
+                break;
+            case MODIFY:
+                //MODIFY [COLUMN] col_name column_definition [FIRST | AFTER col_name]
+                accept(MODIFY);
+                acceptIf(COLUMN);
+                String modifyColName = accept(IDENT).value;
+                createTableParser.parseColumnDefinition();
+                if (token().tag == FIRST) {
+                    accept(FIRST);
+                } else if (token().tag == AFTER) {
+                    accept(AFTER);
+                    colName = accept(IDENT).value;
+                }
+                break;
+            case DROP:
+                accept(DROP);
+                switch (token().tag) {
+                    case PRIMARY:
+                        acceptN(PRIMARY, KEY);
+                        break;
+                    case INDEX:
+                        accept(INDEX);
+                        String indexName = accept(IDENT).value;
+                        break;
+                    case KEY:
+                        accept(KEY);
+                        indexName = accept(IDENT).value;
+                        break;
+                    case FOREIGN:
+                        acceptN(FOREIGN, KEY);
+                        String fkSymbol = accept(IDENT).value;
+                        break;
+                    case PARTITION:
+                        accept(PARTITION);
+                        String partitionNames = accept(IDENT).value;
+                        break;
+                    case COLUMN:
+                        accept(COLUMN);
+                        colName = accept(IDENT).value;
+                        break;
+                    case IDENT:
+                        colName = accept(IDENT).value;
+                        break;
+                    default:
+                        reportSyntaxError("Expected but " + token().tag);
+                }
+                break;
+            case DISABLE:
+                acceptN(DISABLE, KEYS);
+                break;
+            case ENABLE:
+                acceptN(ENABLE, KEYS);
+                break;
+            case RENAME:
+                accept(RENAME);
+                //[TO|AS] new_tbl_name
+                if (token().tag == TO) {
+                    accept(TO);
+                } else if (token().tag == AS) {
+                    accept(AS);
+                }
+                String newTableName = accept(IDENT).value;
+                break;
+            case ORDER:
+                //ORDER BY col_name [, col_name] ...
+                acceptN(ORDER, BY);
+                List<String> orderBy = new ArrayList<>();
+                do {
+                    orderBy.add(accept(IDENT).value);
+                } while (tokenIs(COMMA));
+                break;
+            case CONVERT:
+                acceptN(CONVERT, TO, CHARACTER, SET);
+                String charSet = accept(IDENT).value;
+                break;
+            case DEFAULT:
+                //[DEFAULT] CHARACTER SET [=] charset_name [COLLATE [=] collation_name]
+            case CHARACTER:
+                //CHARACTER SET [=] charset_name [COLLATE [=] collation_name]
+            case DISCARD:
+                acceptN(DISCARD, TABLESPACE);
+                break;
+            case IMPORT:
+                acceptN(IMPORT, TABLESPACE);
+                break;
+            case FORCE:
+                accept(FORCE);
+                break;
+            case TRUNCATE:
+                acceptN(TRUNCATE, PARTITION);
+                //{partition_names | ALL}
+                if (token().tag == IDENT) {
+                    String partitionNames = accept(IDENT).value;
+                } else {
+                    accept(ALL);
+                }
+                break;
+            case COALESCE:
+                acceptN(COALESCE, PARTITION);
+                String number = accept(NUMBER).value;
+            case REORGANIZE:
+                acceptN(REORGANIZE, PARTITION);
+                String partitionNames = accept(IDENT).value;
+                accept(INTO);
+                accept(LPAREN);
+                createTableParser.parsePartitionDefinition();
+                accept(RPAREN);
+                break;
+            case EXCHANGE:
+                acceptN(EXCHANGE, PARTITION);
+                partitionNames = accept(IDENT).value;
+                acceptN(WITH, TABLE);
+                String tableName = accept(IDENT).value;
+                break;
+            case ANALYZE:
+                acceptN(ANALYZE, PARTITION);
+                if (token().tag == IDENT) {
+                    partitionNames = accept(IDENT).value;
+                } else {
+                    accept(ALL);
+                }
+                break;
+            case CHECK:
+                acceptN(CHECK, PARTITION);
+                if (token().tag == IDENT) {
+                    partitionNames = accept(IDENT).value;
+                } else {
+                    accept(ALL);
+                }
+                break;
+            case OPTIMIZE:
+                acceptN(OPTIMIZE, PARTITION);
+                if (token().tag == IDENT) {
+                    partitionNames = accept(IDENT).value;
+                } else {
+                    accept(ALL);
+                }
+                break;
+            case REBUILD:
+                acceptN(REBUILD, PARTITION);
+                if (token().tag == IDENT) {
+                    partitionNames = accept(IDENT).value;
+                } else {
+                    accept(ALL);
+                }
+                break;
+            case REPAIR:
+                acceptN(REPAIR, PARTITION);
+                if (token().tag == IDENT) {
+                    partitionNames = accept(IDENT).value;
+                } else {
+                    accept(ALL);
+                }
+                break;
+            case REMOVE:
+                acceptN(REMOVE, PARTITIONING);
+                break;
 
+            //TODO
+//        table_option:
+//        ENGINE [=] engine_name
+//        | AUTO_INCREMENT [=] value
+//        | AVG_ROW_LENGTH [=] value
+//        | [DEFAULT] CHARACTER SET [=] charset_name
+//        | CHECKSUM [=] {0 | 1}
+//        | [DEFAULT] COLLATE [=] collation_name
+//        | COMMENT [=] 'string'
+//        | CONNECTION [=] 'connect_string'
+//        | DATA DIRECTORY [=] 'absolute path to directory'
+//        | DELAY_KEY_WRITE [=] {0 | 1}
+//        | INDEX DIRECTORY [=] 'absolute path to directory'
+//        | INSERT_METHOD [=] { NO | FIRST | LAST }
+//        | KEY_BLOCK_SIZE [=] value
+//        | MAX_ROWS [=] value
+//        | MIN_ROWS [=] value
+//        | PACK_KEYS [=] {0 | 1 | DEFAULT}
+//        | PASSWORD [=] 'string'
+//        | ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
+//        | STATS_AUTO_RECALC [=] {DEFAULT|0|1}
+//        | STATS_PERSISTENT [=] {DEFAULT|0|1}
+//        | STATS_SAMPLE_PAGES [=] value
+//        | TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
+//        | UNION [=] (tbl_name[,tbl_name]...)
         }
     }
 
@@ -110,7 +295,7 @@ public class AlterTableParser extends AbstractParser {
             switch (token().tag) {
                 case COLUMN:
                     accept(COLUMN);
-                    if (lookahead(IDENT, LPAREN)) {
+                    if (token().tag == IDENT || token().tag == LPAREN) {
                         continue loop;
                     } else {
                         next();
@@ -121,7 +306,7 @@ public class AlterTableParser extends AbstractParser {
                     if (token().tag == IDENT) {
                         accept(IDENT);
                     }
-                    if (lookahead1(PRIMARY, UNIQUE, FOREIGN)) {
+                    if (token().tag == PRIMARY || token().tag == UNIQUE || token().tag == FOREIGN) {
                         continue loop;
                     } else {
                         next();
@@ -245,8 +430,15 @@ public class AlterTableParser extends AbstractParser {
                     accept(RPAREN);
                     createTableParser.parseReferenceDefinition();
                     break loop;
+                case PARTITION:
+                    //PARTITION
+                    accept(PARTITION);
+                    //(partition_definition)
+                    accept(LPAREN);
+                    createTableParser.parsePartitionOptions();
+                    accept(RPAREN);
                 default:
-                    reportSyntaxError("Eexcpted but " + token().tag);
+                    reportSyntaxError("Excepted but " + token().tag);
             }
         }
 
@@ -296,6 +488,13 @@ public class AlterTableParser extends AbstractParser {
         } else {
             accept(HASH);
         }
+    }
+
+    public static void main(String[] args) {
+        String sql = "alter table abc DISABLE KEYS";
+        MysqlScanner scanner = new MysqlScanner(sql.toCharArray());
+        AlterTableParser parser = new AlterTableParser(scanner);
+        parser.parseAlterTable();
     }
 
 }

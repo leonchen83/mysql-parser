@@ -26,7 +26,7 @@ public class CreateTableParser extends AbstractParser {
     }
 
     public void parseColumnDefinition(){
-        //TODO
+        System.out.println(token().value);
     }
 
     public void parseReferenceDefinition(){
@@ -35,5 +35,36 @@ public class CreateTableParser extends AbstractParser {
 
     public void parsePartitionOptions() {
         //TODO
+    }
+
+    public void parseTableOption(){
+//        table_option:
+//        ENGINE [=] engine_name
+//        | AUTO_INCREMENT [=] value
+//        | AVG_ROW_LENGTH [=] value
+//        | [DEFAULT] CHARACTER SET [=] charset_name
+//        | CHECKSUM [=] {0 | 1}
+//        | [DEFAULT] COLLATE [=] collation_name
+//        | COMMENT [=] 'string'
+//        | CONNECTION [=] 'connect_string'
+//        | DATA DIRECTORY [=] 'absolute path to directory'
+//        | DELAY_KEY_WRITE [=] {0 | 1}
+//        | INDEX DIRECTORY [=] 'absolute path to directory'
+//        | INSERT_METHOD [=] { NO | FIRST | LAST }
+//        | KEY_BLOCK_SIZE [=] value
+//        | MAX_ROWS [=] value
+//        | MIN_ROWS [=] value
+//        | PACK_KEYS [=] {0 | 1 | DEFAULT}
+//        | PASSWORD [=] 'string'
+//        | ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
+//        | STATS_AUTO_RECALC [=] {DEFAULT|0|1}
+//        | STATS_PERSISTENT [=] {DEFAULT|0|1}
+//        | STATS_SAMPLE_PAGES [=] value
+//        | TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
+//        | UNION [=] (tbl_name[,tbl_name]...)
+    }
+
+    public void parsePartitionDefinition(){
+
     }
 }

@@ -184,6 +184,21 @@ public class MysqlTokenizer {
                     value.append(current());
                     next();
                     break loop;
+                case '=':
+                    tag = TokenTag.EQUAL;
+                    value.append(current());
+                    next();
+                    break loop;
+                case '(':
+                    tag = TokenTag.LPAREN;
+                    value.append(current());
+                    next();
+                    break loop;
+                case ')':
+                    tag = TokenTag.RPAREN;
+                    value.append(current());
+                    next();
+                    break loop;
                 case '\n':
                 case '\b':
                 case '\r':

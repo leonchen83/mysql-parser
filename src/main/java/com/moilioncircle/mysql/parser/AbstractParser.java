@@ -4,6 +4,8 @@ import com.moilioncircle.mysql.tokenizer.MysqlScanner;
 import com.moilioncircle.mysql.tokenizer.Token;
 import com.moilioncircle.mysql.tokenizer.TokenTag;
 
+import java.util.Arrays;
+
 /**
  * Copyright leon
  * <p>
@@ -93,6 +95,17 @@ public abstract class AbstractParser {
         if (token().tag == tag) {
             return accept(tag);
         }
+        return null;
+    }
+
+    public Token acceptOr(TokenTag... tags) {
+        for (TokenTag tag : tags) {
+            if (token().tag == tag) {
+                return accept(tag);
+            }
+        }
+        String expected = Arrays.deepToString(Arrays.asList(tags).stream().map(e -> e.tagName).toArray());
+        reportSyntaxError("Excepted " + expected + " but " + token().tag);
         return null;
     }
 }
