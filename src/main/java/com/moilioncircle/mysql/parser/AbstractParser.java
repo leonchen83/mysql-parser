@@ -35,6 +35,7 @@ public abstract class AbstractParser {
         if (token().tag == tag) {
             if (token().tag != TokenTag.EOF) {
                 Token temp = token();
+                dump(temp);
                 next();
                 return temp;
             }
@@ -42,6 +43,12 @@ public abstract class AbstractParser {
             reportSyntaxError("Expected " + tag + " but " + token().tag);
         }
         return null;
+    }
+
+    private void dump(Token temp) {
+        if (temp.tag == TokenTag.IDENT || temp.tag == TokenTag.STRING || temp.tag == TokenTag.STRING || temp.tag == TokenTag.NUMBER) {
+            System.out.println(temp.value);
+        }
     }
 
     public boolean tokenIs(TokenTag tag) {

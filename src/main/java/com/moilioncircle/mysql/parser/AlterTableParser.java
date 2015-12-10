@@ -66,7 +66,7 @@ public class AlterTableParser extends AbstractParser {
     private void parseAlterSpecification() {
         switch (token().tag) {
             case ADD:
-                parseAddStatment();
+                parseAddStatement();
                 break;
             case ALGORITHM:
                 accept(ALGORITHM);
@@ -157,13 +157,23 @@ public class AlterTableParser extends AbstractParser {
                 break;
             case RENAME:
                 accept(RENAME);
+                //{INDEX|KEY} old_index_name TO new_index_name
                 //[TO|AS] new_tbl_name
-                if (token().tag == TO) {
+                if (token().tag == INDEX || token().tag == KEY) {
+                    acceptOr(INDEX,KEY);
+                    String oldIndexName = accept(IDENT).value;
                     accept(TO);
-                } else if (token().tag == AS) {
-                    accept(AS);
+                    String newIndexName = accept(IDENT).value;
+                } else {
+                    if (token().tag == TO) {
+                        accept(TO);
+                    } else if (token().tag == AS) {
+                        accept(AS);
+                    }
+                    String newTableName = accept(IDENT).value;
                 }
-                String newTableName = accept(IDENT).value;
+
+
                 break;
             case ORDER:
                 //ORDER BY col_name [, col_name] ...
@@ -178,9 +188,29 @@ public class AlterTableParser extends AbstractParser {
                 String charSet = accept(IDENT).value;
                 break;
             case DEFAULT:
-                //[DEFAULT] CHARACTER SET [=] charset_name [COLLATE [=] collation_name]
+                //[DEFAULT] CHARACTER SET [=] charset_name
+                acceptN(DEFAULT, CHARACTER, SET);
+                acceptIf(EQUAL);
+                String charsetName = accept(STRING).value;
+                //[COLLATE [=] collation_name]
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    acceptIf(EQUAL);
+                    String collatioName = accept(IDENT).value;
+                }
+                break;
             case CHARACTER:
-                //CHARACTER SET [=] charset_name [COLLATE [=] collation_name]
+                //CHARACTER SET [=] charset_name
+                acceptN(CHARACTER, SET);
+                acceptIf(EQUAL);
+                charsetName = accept(STRING).value;
+                //[COLLATE [=] collation_name]
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    acceptIf(EQUAL);
+                    String collatioName = accept(IDENT).value;
+                }
+                break;
             case DISCARD:
                 acceptN(DISCARD, TABLESPACE);
                 break;
@@ -259,36 +289,12 @@ public class AlterTableParser extends AbstractParser {
             case REMOVE:
                 acceptN(REMOVE, PARTITIONING);
                 break;
-
-            //TODO
-//        table_option:
-//        ENGINE [=] engine_name
-//        | AUTO_INCREMENT [=] value
-//        | AVG_ROW_LENGTH [=] value
-//        | [DEFAULT] CHARACTER SET [=] charset_name
-//        | CHECKSUM [=] {0 | 1}
-//        | [DEFAULT] COLLATE [=] collation_name
-//        | COMMENT [=] 'string'
-//        | CONNECTION [=] 'connect_string'
-//        | DATA DIRECTORY [=] 'absolute path to directory'
-//        | DELAY_KEY_WRITE [=] {0 | 1}
-//        | INDEX DIRECTORY [=] 'absolute path to directory'
-//        | INSERT_METHOD [=] { NO | FIRST | LAST }
-//        | KEY_BLOCK_SIZE [=] value
-//        | MAX_ROWS [=] value
-//        | MIN_ROWS [=] value
-//        | PACK_KEYS [=] {0 | 1 | DEFAULT}
-//        | PASSWORD [=] 'string'
-//        | ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
-//        | STATS_AUTO_RECALC [=] {DEFAULT|0|1}
-//        | STATS_PERSISTENT [=] {DEFAULT|0|1}
-//        | STATS_SAMPLE_PAGES [=] value
-//        | TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
-//        | UNION [=] (tbl_name[,tbl_name]...)
+            default:
+                createTableParser.parseTableOption();
         }
     }
 
-    private void parseAddStatment() {
+    private void parseAddStatement() {
         accept(ADD);
         loop:
         while (true) {
@@ -491,7 +497,12 @@ public class AlterTableParser extends AbstractParser {
     }
 
     public static void main(String[] args) {
-        String sql = "alter table abc DISABLE KEYS";
+        String sql = "alter table abc DEFAULT CHARACTER SET = 'charset_name' COLLATE = collation_name," +
+                "DEFAULT CHARACTER SET = 'utf8' COLLATE = aaaa," +
+                "DROP index_name," +
+                "RENAME KEY old_index_name TO new_index_name," +
+                "RENAME new_table," +
+                "DROP FOREIGN KEY fk_symbol";
         MysqlScanner scanner = new MysqlScanner(sql.toCharArray());
         AlterTableParser parser = new AlterTableParser(scanner);
         parser.parseAlterTable();

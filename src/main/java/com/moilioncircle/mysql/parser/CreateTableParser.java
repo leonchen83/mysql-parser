@@ -2,6 +2,11 @@ package com.moilioncircle.mysql.parser;
 
 import com.moilioncircle.mysql.tokenizer.MysqlScanner;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
+
 /**
  * Copyright leon
  * <p>
@@ -25,11 +30,11 @@ public class CreateTableParser extends AbstractParser {
         super(scanner);
     }
 
-    public void parseColumnDefinition(){
+    public void parseColumnDefinition() {
         System.out.println(token().value);
     }
 
-    public void parseReferenceDefinition(){
+    public void parseReferenceDefinition() {
         //TODO
     }
 
@@ -37,34 +42,203 @@ public class CreateTableParser extends AbstractParser {
         //TODO
     }
 
-    public void parseTableOption(){
-//        table_option:
-//        ENGINE [=] engine_name
-//        | AUTO_INCREMENT [=] value
-//        | AVG_ROW_LENGTH [=] value
-//        | [DEFAULT] CHARACTER SET [=] charset_name
-//        | CHECKSUM [=] {0 | 1}
-//        | [DEFAULT] COLLATE [=] collation_name
-//        | COMMENT [=] 'string'
-//        | CONNECTION [=] 'connect_string'
-//        | DATA DIRECTORY [=] 'absolute path to directory'
-//        | DELAY_KEY_WRITE [=] {0 | 1}
-//        | INDEX DIRECTORY [=] 'absolute path to directory'
-//        | INSERT_METHOD [=] { NO | FIRST | LAST }
-//        | KEY_BLOCK_SIZE [=] value
-//        | MAX_ROWS [=] value
-//        | MIN_ROWS [=] value
-//        | PACK_KEYS [=] {0 | 1 | DEFAULT}
-//        | PASSWORD [=] 'string'
-//        | ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
-//        | STATS_AUTO_RECALC [=] {DEFAULT|0|1}
-//        | STATS_PERSISTENT [=] {DEFAULT|0|1}
-//        | STATS_SAMPLE_PAGES [=] value
-//        | TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
-//        | UNION [=] (tbl_name[,tbl_name]...)
+    public void parseTableOption() {
+        switch (token().tag) {
+            case ENGINE:
+                //ENGINE [=] engine_name
+                accept(ENGINE);
+                acceptIf(EQUAL);
+                String engineName = accept(IDENT).value;
+                break;
+            case AUTO_INCREMENT:
+                //AUTO_INCREMENT [=] value
+                accept(AUTO_INCREMENT);
+                acceptIf(EQUAL);
+                String value = accept(NUMBER).value;
+                break;
+            case AVG_ROW_LENGTH:
+                //AVG_ROW_LENGTH [=] value
+                accept(AVG_ROW_LENGTH);
+                acceptIf(EQUAL);
+                value = accept(NUMBER).value;
+                break;
+            case DEFAULT:
+                //[DEFAULT] CHARACTER SET [=] charset_name
+                //[DEFAULT] COLLATE [=] collation_name
+                accept(DEFAULT);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    acceptIf(EQUAL);
+                    String charsetName = accept(IDENT).value;
+                } else if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    acceptIf(EQUAL);
+                    String collationName = accept(IDENT).value;
+                } else {
+                    reportSyntaxError("Expected [CHARACTER,COLLATE] but " + token().tag);
+                }
+                break;
+            case CHARACTER:
+                //CHARACTER SET [=] charset_name
+                acceptN(CHARACTER, SET);
+                acceptIf(EQUAL);
+                String charsetName = accept(IDENT).value;
+                break;
+            case CHECKSUM:
+                //CHECKSUM [=] {0 | 1}
+                accept(CHECKSUM);
+                acceptIf(EQUAL);
+                String number = accept(NUMBER).value;
+                if (!number.equals("1") && !number.equals("2")) {
+                    reportSyntaxError("Expected [0,1] but " + number);
+                }
+                break;
+            case COLLATE:
+                //COLLATE [=] collation_name
+                accept(COLLATE);
+                acceptIf(EQUAL);
+                String collationName = accept(IDENT).value;
+                break;
+            case COMMENT:
+                //COMMENT [=] 'string'
+                accept(COMMENT);
+                acceptIf(EQUAL);
+                String str = accept(STRING).value;
+                break;
+            case CONNECTION:
+                //CONNECTION [=] 'connect_string'
+                accept(CONNECTION);
+                acceptIf(EQUAL);
+                String connectString = accept(STRING).value;
+                break;
+            case DATA:
+                //DATA DIRECTORY [=] 'absolute path to directory'
+                acceptN(DATA, DIRECTORY);
+                acceptIf(EQUAL);
+                String path = accept(STRING).value;
+                break;
+            case DELAY_KEY_WRITE:
+                //DELAY_KEY_WRITE [=] {0 | 1}
+                accept(DELAY_KEY_WRITE);
+                acceptIf(EQUAL);
+                number = accept(NUMBER).value;
+                if (!number.equals("1") && !number.equals("2")) {
+                    reportSyntaxError("Expected [0,1] but " + number);
+                }
+                break;
+            case INDEX:
+                //INDEX DIRECTORY [=] 'absolute path to directory'
+                acceptN(INDEX, DIRECTORY);
+                acceptIf(EQUAL);
+                path = accept(STRING).value;
+                break;
+            case INSERT_METHOD:
+                //INSERT_METHOD [=] { NO | FIRST | LAST }
+                accept(INSERT_METHOD);
+                acceptIf(EQUAL);
+                acceptOr(NO, FIRST, LAST);
+                break;
+            case KEY_BLOCK_SIZE:
+                //KEY_BLOCK_SIZE [=] value
+                accept(KEY_BLOCK_SIZE);
+                acceptIf(EQUAL);
+                value = accept(NUMBER).value;
+                break;
+            case MAX_ROWS:
+                //MAX_ROWS [=] value
+                accept(MAX_ROWS);
+                acceptIf(EQUAL);
+                value = accept(NUMBER).value;
+                break;
+            case MIN_ROWS:
+                //MIN_ROWS [=] value
+                accept(MIN_ROWS);
+                acceptIf(EQUAL);
+                value = accept(NUMBER).value;
+                break;
+            case PACK_KEYS:
+                //PACK_KEYS [=] {0 | 1 | DEFAULT}
+                accept(PACK_KEYS);
+                acceptIf(EQUAL);
+                if (token().tag == NUMBER) {
+                    number = accept(NUMBER).value;
+                    if (!number.equals("1") && !number.equals("2")) {
+                        reportSyntaxError("Expected [0,1] but " + number);
+                    }
+                } else {
+                    accept(DEFAULT);
+                }
+                break;
+            case PASSWORD:
+                //PASSWORD [=] 'string'
+                accept(PASSWORD);
+                acceptIf(EQUAL);
+                str = accept(STRING).value;
+                break;
+            case ROW_FORMAT:
+                //ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
+                accept(ROW_FORMAT);
+                acceptIf(EQUAL);
+                acceptOr(DEFAULT,DYNAMIC,FIXED,COMPRESSED,REDUNDANT,COMPACT);
+                break;
+            case STATS_AUTO_RECALC:
+                //STATS_AUTO_RECALC [=] {DEFAULT|0|1}
+                accept(STATS_AUTO_RECALC);
+                acceptIf(EQUAL);
+                if (token().tag == NUMBER) {
+                    number = accept(NUMBER).value;
+                    if (!number.equals("1") && !number.equals("2")) {
+                        reportSyntaxError("Expected [0,1] but " + number);
+                    }
+                } else {
+                    accept(DEFAULT);
+                }
+                break;
+            case STATS_PERSISTENT:
+                //STATS_PERSISTENT [=] {DEFAULT|0|1}
+                accept(STATS_PERSISTENT);
+                acceptIf(EQUAL);
+                if (token().tag == NUMBER) {
+                    number = accept(NUMBER).value;
+                    if (!number.equals("1") && !number.equals("2")) {
+                        reportSyntaxError("Expected [0,1] but " + number);
+                    }
+                } else {
+                    accept(DEFAULT);
+                }
+                break;
+            case STATS_SAMPLE_PAGES:
+                //STATS_SAMPLE_PAGES [=] value
+                accept(STATS_SAMPLE_PAGES);
+                acceptIf(EQUAL);
+                value = accept(NUMBER).value;
+                break;
+            case TABLESPACE:
+                //TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
+                accept(TABLESPACE);
+                String tablespaceName = accept(IDENT).value;
+                if(token().tag == STORAGE){
+                    accept(STORAGE);
+                    acceptOr(DISK,MEMORY,DEFAULT);
+                }
+                break;
+            case UNION:
+                //UNION [=] (tbl_name[,tbl_name]...)
+                accept(UNION);
+                acceptIf(EQUAL);
+                accept(LPAREN);
+                List<String> tableNames = new ArrayList<>();
+                do{
+                    tableNames.add(accept(IDENT).value);
+                }while(tokenIs(COMMA));
+                accept(RPAREN);
+                break;
+            default:
+                reportSyntaxError("Expected '' but " + token().tag);
+        }
     }
 
-    public void parsePartitionDefinition(){
+    public void parsePartitionDefinition() {
 
     }
 }
