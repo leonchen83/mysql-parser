@@ -26,20 +26,274 @@ import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
  */
 public class CreateTableParser extends AbstractParser {
 
+    private final ExprParser exprParser;
+
     public CreateTableParser(MysqlScanner scanner) {
         super(scanner);
+        exprParser = new ExprParser(scanner);
     }
 
     public void parseColumnDefinition() {
-        System.out.println(token().value);
+        //TODO
     }
 
     public void parseReferenceDefinition() {
+        accept(REFERENCES);
+        String tableName = accept(IDENT).value;
+        accept(LPAREN);
+        do {
+            parseIndexColName();
+        } while (tokenIs(COMMA));
+        accept(RPAREN);
+        switch (token().tag) {
+            case MATCH:
+                accept(MATCH);
+                acceptOr(FULL, PARTIAL, SIMPLE);
+                break;
+            case ON:
+                accept(ON);
+                if (token().tag == DELETE) {
+                    accept(DELETE);
+                    parseReferenceOption();
+                } else {
+                    accept(UPDATE);
+                    parseReferenceOption();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void parseReferenceOption() {
+        //RESTRICT | CASCADE | SET NULL | NO ACTION
+        switch (token().tag) {
+            case RESTRICT:
+                accept(RESTRICT);
+                break;
+            case CASCADE:
+                accept(CASCADE);
+                break;
+            case SET:
+                acceptN(SET, NULL);
+                break;
+            case NO:
+                acceptN(NO, ACTION);
+                break;
+            default:
+                reportSyntaxError("Expected [RESTRICT | CASCADE | SET | NO] but " + token().tag);
+        }
+    }
+
+    private void parseIndexColName() {
         //TODO
     }
 
+    private void parseSubpartitionDefinition() {
+        accept(SUBPARTITION);
+        String logicalName = accept(IDENT).value;
+        switch (token().tag) {
+            case STORAGE:
+                //[[STORAGE] ENGINE [=] engine_name]
+                acceptN(STORAGE, ENGINE);
+                acceptIf(EQUAL);
+                String engineName = accept(IDENT).value;
+                break;
+            case ENGINE:
+                acceptN(ENGINE);
+                acceptIf(EQUAL);
+                engineName = accept(IDENT).value;
+                break;
+            case COMMENT:
+                //[COMMENT [=] 'comment_text' ]
+                accept(COMMENT);
+                acceptIf(EQUAL);
+                String commentText = accept(STRING).value;
+                break;
+            case DATA:
+                //[DATA DIRECTORY [=] 'data_dir']
+                acceptN(DATA, DIRECTORY);
+                acceptIf(EQUAL);
+                String dataDir = accept(STRING).value;
+                break;
+            case INDEX:
+                //[INDEX DIRECTORY [=] 'index_dir']
+                acceptN(INDEX, DIRECTORY);
+                acceptIf(EQUAL);
+                String indexDir = accept(STRING).value;
+                break;
+            case MAX_ROWS:
+                //[MAX_ROWS [=] max_number_of_rows]
+                accept(MAX_ROWS);
+                acceptIf(EQUAL);
+                String maxNumberOfRows = accept(NUMBER).value;
+                break;
+            case MIN_ROWS:
+                //[MIN_ROWS [=] min_number_of_rows]
+                accept(MIN_ROWS);
+                acceptIf(EQUAL);
+                String minNumberOfRows = accept(NUMBER).value;
+                break;
+            case TABLESPACE:
+                //[TABLESPACE [=] tablespace_name]
+                accept(TABLESPACE);
+                acceptIf(EQUAL);
+                String tablespaceName = accept(IDENT).value;
+                break;
+            case NODEGROUP:
+                //[NODEGROUP [=] node_group_id]
+                accept(NODEGROUP);
+                acceptIf(EQUAL);
+                String nodeGroupId = accept(NUMBER).value;
+                break;
+            default:
+                break;
+        }
+    }
+
     public void parsePartitionOptions() {
-        //TODO
+        acceptN(PARTITION, BY);
+        loop:
+        while (true) {
+            switch (token().tag) {
+                case LINEAR:
+                    accept(LINEAR);
+                    if (token().tag == HASH || token().tag == KEY) {
+                        continue loop;
+                    } else {
+                        reportSyntaxError("Excepted [HASH|KEY] but " + token().tag);
+                        break loop;
+                    }
+                case HASH:
+                    //HASH(expr)
+                    accept(HASH);
+                    accept(LPAREN);
+                    exprParser.parseExpr();
+                    accept(RPAREN);
+                    break loop;
+                case KEY:
+                    //KEY [ALGORITHM={1|2}] (column_list)
+                    accept(KEY);
+                    if (token().tag == ALGORITHM) {
+                        acceptN(ALGORITHM, EQUAL);
+                        String number = accept(NUMBER).value;
+                        if (!number.equals("1") && !number.equals("2")) {
+                            reportSyntaxError("Expected [0,1] but " + number);
+                        }
+                    }
+                    accept(LPAREN);
+                    //assume column_list is like (abc,bcd)
+                    List<String> columnList = new ArrayList<>();
+                    do {
+                        columnList.add(accept(IDENT).value);
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                    break loop;
+                case RANGE:
+                    //RANGE { (expr) | COLUMNS(column_list) }
+                    accept(RANGE);
+                    if (token().tag == LPAREN) {
+                        accept(LPAREN);
+                        exprParser.parseExpr();
+                        accept(RPAREN);
+                    } else {
+                        accept(COLUMNS);
+                        accept(LPAREN);
+                        //assume column_list is like (abc,bcd)
+                        columnList = new ArrayList<>();
+                        do {
+                            columnList.add(accept(IDENT).value);
+                        } while (tokenIs(COMMA));
+                        accept(RPAREN);
+                    }
+                    break loop;
+                case LIST:
+                    //LIST{(expr) | COLUMNS(column_list)}
+                    accept(LIST);
+                    if (token().tag == LPAREN) {
+                        accept(LPAREN);
+                        exprParser.parseExpr();
+                        accept(RPAREN);
+                    } else {
+                        accept(COLUMNS);
+                        accept(LPAREN);
+                        //assume column_list is like (abc,bcd)
+                        columnList = new ArrayList<>();
+                        do {
+                            columnList.add(accept(IDENT).value);
+                        } while (tokenIs(COMMA));
+                        accept(RPAREN);
+                    }
+                    break loop;
+                default:
+                    reportSyntaxError("Excepted but " + token().tag);
+                    break loop;
+            }
+        }
+
+        switch (token().tag) {
+            case PARTITIONS:
+                //[PARTITIONS num]
+                break;
+            case SUBPARTITION:
+                //[SUBPARTITION BY { [LINEAR] HASH(expr) | [LINEAR] KEY [ALGORITHM={1|2}] (column_list) } [SUBPARTITIONS num]
+                acceptN(SUBPARTITION, BY);
+                loop:
+                while (true) {
+                    switch (token().tag) {
+                        case LINEAR:
+                            accept(LINEAR);
+                            if (token().tag == HASH || token().tag == KEY) {
+                                continue loop;
+                            } else {
+                                reportSyntaxError("Excepted [HASH|KEY] but " + token().tag);
+                                break loop;
+                            }
+                        case HASH:
+                            accept(HASH);
+                            accept(LPAREN);
+                            exprParser.parseExpr();
+                            accept(RPAREN);
+                            break loop;
+                        case KEY:
+                            //KEY [ALGORITHM={1|2}] (column_list)
+                            accept(KEY);
+                            if (token().tag == ALGORITHM) {
+                                acceptN(ALGORITHM, EQUAL);
+                                String number = accept(NUMBER).value;
+                                if (!number.equals("1") && !number.equals("2")) {
+                                    reportSyntaxError("Expected [0,1] but " + number);
+                                }
+                            }
+                            accept(LPAREN);
+                            //assume column_list is like (abc,bcd)
+                            List<String> columnList = new ArrayList<>();
+                            do {
+                                columnList.add(accept(IDENT).value);
+                            } while (tokenIs(COMMA));
+                            accept(RPAREN);
+                            break loop;
+                        default:
+                            reportSyntaxError("Excepted [LINEAR|HASH|KEY] but " + token().tag);
+                            break loop;
+                    }
+                }
+                if (token().tag == SUBPARTITIONS) {
+                    accept(SUBPARTITIONS);
+                    String num = accept(NUMBER).value;
+                }
+                break;
+            case LPAREN:
+                accept(LPAREN);
+                do {
+                    parsePartitionDefinition();
+                } while (tokenIs(COMMA));
+                accept(RPAREN);
+                break;
+            default:
+                // NOP
+        }
+
     }
 
     public void parseTableOption() {
@@ -179,7 +433,7 @@ public class CreateTableParser extends AbstractParser {
                 //ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
                 accept(ROW_FORMAT);
                 acceptIf(EQUAL);
-                acceptOr(DEFAULT,DYNAMIC,FIXED,COMPRESSED,REDUNDANT,COMPACT);
+                acceptOr(DEFAULT, DYNAMIC, FIXED, COMPRESSED, REDUNDANT, COMPACT);
                 break;
             case STATS_AUTO_RECALC:
                 //STATS_AUTO_RECALC [=] {DEFAULT|0|1}
@@ -217,9 +471,9 @@ public class CreateTableParser extends AbstractParser {
                 //TABLESPACE tablespace_name [STORAGE {DISK|MEMORY|DEFAULT}]
                 accept(TABLESPACE);
                 String tablespaceName = accept(IDENT).value;
-                if(token().tag == STORAGE){
+                if (token().tag == STORAGE) {
                     accept(STORAGE);
-                    acceptOr(DISK,MEMORY,DEFAULT);
+                    acceptOr(DISK, MEMORY, DEFAULT);
                 }
                 break;
             case UNION:
@@ -228,9 +482,9 @@ public class CreateTableParser extends AbstractParser {
                 acceptIf(EQUAL);
                 accept(LPAREN);
                 List<String> tableNames = new ArrayList<>();
-                do{
+                do {
                     tableNames.add(accept(IDENT).value);
-                }while(tokenIs(COMMA));
+                } while (tokenIs(COMMA));
                 accept(RPAREN);
                 break;
             default:
@@ -239,6 +493,100 @@ public class CreateTableParser extends AbstractParser {
     }
 
     public void parsePartitionDefinition() {
-
+        accept(PARTITION);
+        String partitionName = accept(IDENT).value;
+        switch (token().tag) {
+            case VALUES:
+                //[VALUES {LESS THAN {(expr | value_list) | MAXVALUE} | IN (value_list)}]
+                accept(VALUES);
+                if (token().tag == LESS) {
+                    acceptN(LESS, THAN);
+                    if (token().tag == LPAREN) {
+                        accept(LPAREN);
+                        List<String> valueList = new ArrayList<>();
+                        do {
+                            if (lookahead(COMMA)) {
+                                valueList.add(accept(NUMBER).value);
+                            } else {
+                                exprParser.parseExpr();
+                            }
+                        } while (tokenIs(COMMA));
+                        accept(RPAREN);
+                    } else {
+                        accept(MAXVALUE);
+                    }
+                } else {
+                    accept(IN);
+                    accept(LPAREN);
+                    List<String> valueList = new ArrayList<>();
+                    do {
+                        valueList.add(accept(NUMBER).value);
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                }
+                break;
+            case STORAGE:
+                //[[STORAGE] ENGINE [=] engine_name]
+                acceptN(STORAGE, ENGINE);
+                acceptIf(EQUAL);
+                String engineName = accept(IDENT).value;
+                break;
+            case ENGINE:
+                acceptN(ENGINE);
+                acceptIf(EQUAL);
+                engineName = accept(IDENT).value;
+                break;
+            case COMMENT:
+                //[COMMENT [=] 'comment_text' ]
+                accept(COMMENT);
+                acceptIf(EQUAL);
+                String commentText = accept(STRING).value;
+                break;
+            case DATA:
+                //[DATA DIRECTORY [=] 'data_dir']
+                acceptN(DATA, DIRECTORY);
+                acceptIf(EQUAL);
+                String dataDir = accept(STRING).value;
+                break;
+            case INDEX:
+                //[INDEX DIRECTORY [=] 'index_dir']
+                acceptN(INDEX, DIRECTORY);
+                acceptIf(EQUAL);
+                String indexDir = accept(STRING).value;
+                break;
+            case MAX_ROWS:
+                //[MAX_ROWS [=] max_number_of_rows]
+                accept(MAX_ROWS);
+                acceptIf(EQUAL);
+                String maxNumberOfRows = accept(NUMBER).value;
+                break;
+            case MIN_ROWS:
+                //[MIN_ROWS [=] min_number_of_rows]
+                accept(MIN_ROWS);
+                acceptIf(EQUAL);
+                String minNumberOfRows = accept(NUMBER).value;
+                break;
+            case TABLESPACE:
+                //[TABLESPACE [=] tablespace_name]
+                accept(TABLESPACE);
+                acceptIf(EQUAL);
+                String tablespaceName = accept(IDENT).value;
+                break;
+            case NODEGROUP:
+                //[NODEGROUP [=] node_group_id]
+                accept(NODEGROUP);
+                acceptIf(EQUAL);
+                String nodeGroupId = accept(NUMBER).value;
+                break;
+            case LPAREN:
+                //[(subpartition_definition [, subpartition_definition] ...)]
+                accept(LPAREN);
+                do {
+                    parseSubpartitionDefinition();
+                } while (tokenIs(COMMA));
+                break;
+            default:
+                break;
+        }
     }
 }
