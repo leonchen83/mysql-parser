@@ -464,7 +464,7 @@ public class AlterTableParser extends AbstractParser {
         }
     }
 
-    public void parseIndexOption() {
+    private void parseIndexOption() {
         switch (token().tag) {
             case KEY_BLOCK_SIZE:
                 accept(KEY_BLOCK_SIZE);
@@ -487,7 +487,7 @@ public class AlterTableParser extends AbstractParser {
         }
     }
 
-    public void parseIndexType() {
+    private void parseIndexType() {
         accept(USING);
         if (token().tag == BTREE) {
             accept(BTREE);

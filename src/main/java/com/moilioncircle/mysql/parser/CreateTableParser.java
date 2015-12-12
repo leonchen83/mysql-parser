@@ -28,13 +28,11 @@ public class CreateTableParser extends AbstractParser {
 
     private final ExprParser exprParser;
     private final SelectStatementParser selectStatementParser;
-    private final AlterTableParser alterTableParser;
 
     public CreateTableParser(MysqlScanner scanner) {
         super(scanner);
         exprParser = new ExprParser(scanner);
         selectStatementParser = new SelectStatementParser(scanner);
-        alterTableParser = new AlterTableParser(scanner);
     }
 
     public void parseCreateTable() {
@@ -133,7 +131,7 @@ public class CreateTableParser extends AbstractParser {
                     //PRIMARY KEY [index_type] (index_col_name,...) [index_option] ...
                     acceptN(PRIMARY, KEY);
                     if (token().tag == USING) {
-                        alterTableParser.parseIndexType();
+                        parseIndexType();
                     }
                     accept(LPAREN);
                     do {
@@ -145,7 +143,7 @@ public class CreateTableParser extends AbstractParser {
                         case USING:
                         case WITH:
                         case COMMENT:
-                            alterTableParser.parseIndexOption();
+                            parseIndexOption();
                     }
                     break loop;
                 case UNIQUE:
@@ -160,7 +158,7 @@ public class CreateTableParser extends AbstractParser {
                         String indexName = accept(IDENT).value;
                     }
                     if (token().tag == USING) {
-                        alterTableParser.parseIndexType();
+                        parseIndexType();
                     }
                     accept(LPAREN);
                     do {
@@ -172,7 +170,7 @@ public class CreateTableParser extends AbstractParser {
                         case USING:
                         case WITH:
                         case COMMENT:
-                            alterTableParser.parseIndexOption();
+                            parseIndexOption();
                     }
                     break loop;
                 case FOREIGN:
@@ -203,7 +201,7 @@ public class CreateTableParser extends AbstractParser {
                         String indexName = accept(IDENT).value;
                     }
                     if (token().tag == USING) {
-                        alterTableParser.parseIndexType();
+                        parseIndexType();
                     }
                     accept(LPAREN);
                     do {
@@ -215,7 +213,7 @@ public class CreateTableParser extends AbstractParser {
                         case USING:
                         case WITH:
                         case COMMENT:
-                            alterTableParser.parseIndexOption();
+                            parseIndexOption();
                     }
                     break loop;
                 case FULLTEXT:
@@ -235,7 +233,7 @@ public class CreateTableParser extends AbstractParser {
                         case USING:
                         case WITH:
                         case COMMENT:
-                            alterTableParser.parseIndexOption();
+                            parseIndexOption();
                     }
                     break loop;
                 case CHECK:
@@ -1259,16 +1257,99 @@ public class CreateTableParser extends AbstractParser {
         }
     }
 
-    private void parseFsp() {
-        //TODO fsp?
+    private void parseIndexOption() {
+        switch (token().tag) {
+            case KEY_BLOCK_SIZE:
+                accept(KEY_BLOCK_SIZE);
+                if (token().tag == EQUAL) {
+                    accept(EQUAL);
+                }
+                accept(NUMBER);
+                break;
+            case USING:
+                parseIndexType();
+                break;
+            case WITH:
+                acceptN(WITH, PARSER);
+                String parserName = accept(IDENT).value;
+                break;
+            case COMMENT:
+                accept(COMMENT);
+                String str = accept(STRING).value;
+                break;
+        }
     }
 
-    private void parseDefaultValue() {
-        //TODO default value
+    private void parseIndexType() {
+        accept(USING);
+        if (token().tag == BTREE) {
+            accept(BTREE);
+        } else {
+            accept(HASH);
+        }
+    }
+
+    private String parseFsp() {
+        String fsp = accept(STRING).value;
+        return fsp;
+    }
+
+    private String parseDefaultValue() {
+        switch (token().tag) {
+            case STRING:
+                return accept(STRING).value;
+            case NUMBER:
+                return accept(NUMBER).value;
+            case CURRENT_DATE:
+                accept(CURRENT_DATE);
+                return "CURRENT_DATE";
+            case CURRENT_TIMESTAMP:
+                accept(CURRENT_TIMESTAMP);
+                if (token().tag == LPAREN) {
+                    acceptN(LPAREN, RPAREN);
+                    return "CURRENT_TIMESTAMP()";
+                }
+                return "CURRENT_TIMESTAMP";
+            case LOCALTIME:
+                accept(LOCALTIME);
+                if (token().tag == LPAREN) {
+                    acceptN(LPAREN, RPAREN);
+                    return "LOCALTIME()";
+                }
+                return "LOCALTIME";
+            case LOCALTIMESTAMP:
+                accept(LOCALTIMESTAMP);
+                if (token().tag == LPAREN) {
+                    acceptN(LPAREN, RPAREN);
+                    return "LOCALTIMESTAMP()";
+                }
+                return "LOCALTIMESTAMP";
+            case NOW:
+                acceptN(NOW, LPAREN, RPAREN);
+                return "NOW()";
+            case NULL:
+                accept(NULL);
+                return "NULL";
+            default:
+                reportSyntaxError("Expected but " + token().tag);
+                return null;
+        }
     }
 
     private String parseValue() {
-        //TODO 'string'?
-        return accept(NUMBER).value;
+        return parseDefaultValue();
+    }
+
+    public static void main(String[] args) {
+        String sql = "CREATE TABLE `t2` (\n" +
+                "  `id` int(11) NOT NULL,\n" +
+                "  `1a` varchar(45) NOT NULL,\n" +
+                "  `1.23E5` varchar(20) DEFAULT 'abc',\n" +
+                "  `\\nid` varchar(45) DEFAULT NULL,\n" +
+                "  PRIMARY KEY (`id`)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=latin1\n";
+        MysqlScanner scanner = new MysqlScanner(sql.toCharArray());
+        CreateTableParser parser = new CreateTableParser(scanner);
+        parser.parseCreateTable();
     }
 }

@@ -1,7 +1,6 @@
 package com.moilioncircle.mysql.tokenizer;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Copyright leon
@@ -30,7 +29,13 @@ public class MysqlScanner {
         tokenizer = new MysqlTokenizer(chars);
         Token token = null;
         while ((token = tokenizer.nextToken()).tag != TokenTag.EOF) {
-            tokens.add(token);
+            List<TokenTag> tag = synonym(token.tag);
+            if (tag != null) {
+                final Token t = token;
+                tag.forEach(e -> tokens.add(new Token(e, t.value, t.startPos, t.endPos)));
+            } else {
+                tokens.add(token);
+            }
         }
         tokens.add(token);
         this.token = tokens.get(0);
@@ -77,6 +82,15 @@ public class MysqlScanner {
             }
         }
         return false;
+    }
+
+    public List<TokenTag> synonym(TokenTag tag) {
+        Map<TokenTag, List<TokenTag>> map = new HashMap<>();
+        map.put(TokenTag.CHARSET, Arrays.asList(TokenTag.CHARACTER, TokenTag.SET));
+        if (map.containsKey(tag)) {
+            return map.get(tag);
+        }
+        return null;
     }
 
 }
