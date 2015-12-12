@@ -254,50 +254,43 @@ public class CreateTableParser extends AbstractParser {
 
     public void parseColumnDefinition() {
         parseDataType();
-        switch (token().tag) {
-            case NOT:
-                acceptN(NOT, NULL);
-                break;
-            case NULL:
-                accept(NULL);
-                break;
-            case DEFAULT:
-                accept(DEFAULT);
-                parseDefaultValue();
-                break;
-            case AUTO_INCREMENT:
-                accept(AUTO_INCREMENT);
-                break;
-            case UNIQUE:
-                accept(UNIQUE);
-                acceptIf(KEY);
-                break;
-            case PRIMARY:
-                acceptN(PRIMARY, KEY);
-                break;
-            case KEY:
-                accept(KEY);
-                break;
-            case COMMENT:
-                //[COMMENT 'string']
-                accept(COMMENT);
-                String str = accept(STRING).value;
-                break;
-            case COLUMN_FORMAT:
-                //[COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT}]
-                accept(COLUMN_FORMAT);
-                acceptOr(FIXED, DYNAMIC, DEFAULT);
-                break;
-            case STORAGE:
-                //[STORAGE {DISK|MEMORY|DEFAULT}]
-                accept(STORAGE);
-                acceptOr(DISK, MEMORY, DEFAULT);
-                break;
-            case REFERENCES:
-                parseReferenceDefinition();
-            default:
-                break;
+        if (token().tag == NOT) {
+            acceptN(NOT, NULL);
+        } else if (token().tag == NULL) {
+            accept(NULL);
         }
+        if (token().tag == DEFAULT) {
+            accept(DEFAULT);
+            parseDefaultValue();
+        }
+        acceptIf(AUTO_INCREMENT);
+        if (token().tag == UNIQUE) {
+            accept(UNIQUE);
+            acceptIf(KEY);
+        }
+        if (token().tag == PRIMARY) {
+            acceptN(PRIMARY, KEY);
+        } else if (token().tag == KEY) {
+            accept(KEY);
+        }
+        if (token().tag == COMMENT) {
+            accept(COMMENT);
+            String str = accept(STRING).value;
+        }
+        if (token().tag == COLUMN_FORMAT) {
+            //[COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT}]
+            accept(COLUMN_FORMAT);
+            acceptOr(FIXED, DYNAMIC, DEFAULT);
+        }
+        if (token().tag == STORAGE) {
+            //[STORAGE {DISK|MEMORY|DEFAULT}]
+            accept(STORAGE);
+            acceptOr(DISK, MEMORY, DEFAULT);
+        }
+        if (token().tag == REFERENCES) {
+            parseReferenceDefinition();
+        }
+
     }
 
     public void parseDataType() {
@@ -1340,16 +1333,4 @@ public class CreateTableParser extends AbstractParser {
         return parseDefaultValue();
     }
 
-    public static void main(String[] args) {
-        String sql = "CREATE TABLE `t2` (\n" +
-                "  `id` int(11) NOT NULL,\n" +
-                "  `1a` varchar(45) NOT NULL,\n" +
-                "  `1.23E5` varchar(20) DEFAULT 'abc',\n" +
-                "  `\\nid` varchar(45) DEFAULT NULL,\n" +
-                "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=latin1\n";
-        MysqlScanner scanner = new MysqlScanner(sql.toCharArray());
-        CreateTableParser parser = new CreateTableParser(scanner);
-        parser.parseCreateTable();
-    }
 }
