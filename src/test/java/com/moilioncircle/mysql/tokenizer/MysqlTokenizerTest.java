@@ -11,7 +11,7 @@ public class MysqlTokenizerTest extends TestCase {
         MysqlTokenizer tokenizer = new MysqlTokenizer(bit.toCharArray());
         Token token = tokenizer.nextToken();
         assertEquals("10101", token.value);
-        assertEquals(TokenTag.BIT, token.tag);
+        assertEquals(TokenTag.BIT_VALUE, token.tag);
     }
 
     @Test
@@ -53,7 +53,7 @@ public class MysqlTokenizerTest extends TestCase {
         MysqlTokenizer tokenizer = new MysqlTokenizer(bit.toCharArray());
         Token token = tokenizer.nextToken();
         assertEquals("0AF", token.value);
-        assertEquals(TokenTag.HEX, token.tag);
+        assertEquals(TokenTag.HEX_VALUE, token.tag);
 
         try {
             bit = "X'0AF";

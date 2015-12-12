@@ -50,7 +50,7 @@ public class MysqlTokenizer {
                 case 'b':
                     if (lookahead('\'')) {
                         scanBit();
-                        tag = TokenTag.BIT;
+                        tag = TokenTag.BIT_VALUE;
                         next();
                         break loop;
                     }
@@ -78,7 +78,7 @@ public class MysqlTokenizer {
                 case 'x':
                     if (lookahead('\'')) {
                         scanHex();
-                        tag = TokenTag.HEX;
+                        tag = TokenTag.HEX_VALUE;
                         next();
                         break loop;
                     }
@@ -88,7 +88,7 @@ public class MysqlTokenizer {
                 case 'B':
                     if (lookahead('\'')) {
                         scanBit();
-                        tag = TokenTag.BIT;
+                        tag = TokenTag.BIT_VALUE;
                         next();
                         break loop;
                     }
@@ -116,7 +116,7 @@ public class MysqlTokenizer {
                 case 'X':
                     if (lookahead('\'')) {
                         scanHex();
-                        tag = TokenTag.HEX;
+                        tag = TokenTag.HEX_VALUE;
                         next();
                         break loop;
                     }

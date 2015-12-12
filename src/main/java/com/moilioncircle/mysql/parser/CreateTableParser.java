@@ -27,14 +27,628 @@ import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
 public class CreateTableParser extends AbstractParser {
 
     private final ExprParser exprParser;
+    private final SelectStatementParser selectStatementParser;
+    private final AlterTableParser alterTableParser;
 
     public CreateTableParser(MysqlScanner scanner) {
         super(scanner);
         exprParser = new ExprParser(scanner);
+        selectStatementParser = new SelectStatementParser(scanner);
+        alterTableParser = new AlterTableParser(scanner);
+    }
+
+    public void parseCreateTable() {
+        accept(CREATE);
+        acceptIf(TEMPORARY);
+        accept(TABLE);
+        if (token().tag == IF) {
+            acceptN(IF, NOT, EXISTS);
+        }
+        String tableName = accept(IDENT).value;
+        boolean existCreateDefinition = false;
+        if (token().tag == LPAREN) {
+            accept(LPAREN);
+            if (token().tag == LIKE) {
+                accept(LIKE);
+                String oldTableName = accept(IDENT).value;
+                accept(RPAREN);
+                return;
+            } else {
+                do {
+                    parseCreateDefinition();
+                } while (tokenIs(COMMA));
+                accept(RPAREN);
+                existCreateDefinition = true;
+            }
+        } else if (token().tag == LIKE) {
+            accept(LIKE);
+            String oldTableName = accept(IDENT).value;
+            return;
+        }
+        switch (token().tag) {
+            case ENGINE:
+            case AUTO_INCREMENT:
+            case AVG_ROW_LENGTH:
+            case DEFAULT:
+            case CHARACTER:
+            case CHECKSUM:
+            case COLLATE:
+            case COMMENT:
+            case CONNECTION:
+            case DATA:
+            case DELAY_KEY_WRITE:
+            case INDEX:
+            case INSERT_METHOD:
+            case KEY_BLOCK_SIZE:
+            case MAX_ROWS:
+            case MIN_ROWS:
+            case PACK_KEYS:
+            case PASSWORD:
+            case ROW_FORMAT:
+            case STATS_AUTO_RECALC:
+            case STATS_PERSISTENT:
+            case STATS_SAMPLE_PAGES:
+            case TABLESPACE:
+            case UNION:
+                parseTableOptions();
+                break;
+            default:
+                break;
+        }
+        if (token().tag == PARTITION) {
+            parsePartitionOptions();
+        }
+        if (!existCreateDefinition) {
+            //[IGNORE | REPLACE] [AS] SELECT
+            if (token().tag == IGNORE) {
+                accept(IGNORE);
+            } else if (token().tag == REPLACE) {
+                accept(REPLACE);
+            }
+            if (token().tag == AS) {
+                accept(AS);
+            }
+            selectStatementParser.parseSelectStatement();
+        }
+        accept(EOF);
+    }
+
+    private void parseCreateDefinition() {
+        loop:
+        while (true) {
+            switch (token().tag) {
+                case CONSTRAINT:
+                    //[CONSTRAINT [symbol]]
+                    accept(CONSTRAINT);
+                    if (token().tag == IDENT) {
+                        String symbol = accept(IDENT).value;
+                    }
+                    if (token().tag == PRIMARY || token().tag == UNIQUE || token().tag == FOREIGN) {
+                        continue loop;
+                    } else {
+                        reportSyntaxError("Excepted [PRIMARY|UNIQUE|FOREIGN] but " + token().tag);
+                        break loop;
+                    }
+                case PRIMARY:
+                    //PRIMARY KEY [index_type] (index_col_name,...) [index_option] ...
+                    acceptN(PRIMARY, KEY);
+                    if (token().tag == USING) {
+                        alterTableParser.parseIndexType();
+                    }
+                    accept(LPAREN);
+                    do {
+                        parseIndexColName();
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                    switch (token().tag) {
+                        case KEY_BLOCK_SIZE:
+                        case USING:
+                        case WITH:
+                        case COMMENT:
+                            alterTableParser.parseIndexOption();
+                    }
+                    break loop;
+                case UNIQUE:
+                    //UNIQUE [INDEX|KEY] [index_name] [index_type] (index_col_name,...)  [index_option] ...
+                    accept(UNIQUE);
+                    if (token().tag == INDEX) {
+                        accept(INDEX);
+                    } else if (token().tag == KEY) {
+                        accept(KEY);
+                    }
+                    if (token().tag == IDENT) {
+                        String indexName = accept(IDENT).value;
+                    }
+                    if (token().tag == USING) {
+                        alterTableParser.parseIndexType();
+                    }
+                    accept(LPAREN);
+                    do {
+                        parseIndexColName();
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                    switch (token().tag) {
+                        case KEY_BLOCK_SIZE:
+                        case USING:
+                        case WITH:
+                        case COMMENT:
+                            alterTableParser.parseIndexOption();
+                    }
+                    break loop;
+                case FOREIGN:
+                    //FOREIGN KEY [index_name] (index_col_name,...) reference_definition
+                    acceptN(FOREIGN, KEY);
+                    if (token().tag == IDENT) {
+                        String indexName = accept(IDENT).value;
+                    }
+                    accept(LPAREN);
+                    do {
+                        parseIndexColName();
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                    if (token().tag == REFERENCES) {
+                        parseReferenceDefinition();
+                    }
+                    break loop;
+                case IDENT:
+                    //col_name column_definition
+                    String colName = accept(IDENT).value;
+                    parseColumnDefinition();
+                    break loop;
+                case INDEX:
+                case KEY:
+                    //{INDEX|KEY} [index_name] [index_type] (index_col_name,...) [index_option] ...
+                    acceptOr(INDEX, KEY);
+                    if (token().tag == IDENT) {
+                        String indexName = accept(IDENT).value;
+                    }
+                    if (token().tag == USING) {
+                        alterTableParser.parseIndexType();
+                    }
+                    accept(LPAREN);
+                    do {
+                        parseIndexColName();
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                    switch (token().tag) {
+                        case KEY_BLOCK_SIZE:
+                        case USING:
+                        case WITH:
+                        case COMMENT:
+                            alterTableParser.parseIndexOption();
+                    }
+                    break loop;
+                case FULLTEXT:
+                case SPATIAL:
+                    //{FULLTEXT|SPATIAL} [INDEX|KEY] [index_name] (index_col_name,...) [index_option] ...
+                    acceptOr(FULLTEXT, SPATIAL);
+                    if (token().tag == IDENT) {
+                        String indexName = accept(IDENT).value;
+                    }
+                    accept(LPAREN);
+                    do {
+                        parseIndexColName();
+                    } while (tokenIs(COMMA));
+                    accept(RPAREN);
+                    switch (token().tag) {
+                        case KEY_BLOCK_SIZE:
+                        case USING:
+                        case WITH:
+                        case COMMENT:
+                            alterTableParser.parseIndexOption();
+                    }
+                    break loop;
+                case CHECK:
+                    //CHECK (expr)
+                    accept(CHECK);
+                    accept(LPAREN);
+                    exprParser.parseExpr();
+                    accept(RPAREN);
+                    break loop;
+                default:
+                    reportSyntaxError("Excepted but" + token().tag);
+                    break loop;
+            }
+        }
+
+
     }
 
     public void parseColumnDefinition() {
-        //TODO
+        parseDataType();
+        switch (token().tag) {
+            case NOT:
+                acceptN(NOT, NULL);
+                break;
+            case NULL:
+                accept(NULL);
+                break;
+            case DEFAULT:
+                accept(DEFAULT);
+                parseDefaultValue();
+                break;
+            case AUTO_INCREMENT:
+                accept(AUTO_INCREMENT);
+                break;
+            case UNIQUE:
+                accept(UNIQUE);
+                acceptIf(KEY);
+                break;
+            case PRIMARY:
+                acceptN(PRIMARY, KEY);
+                break;
+            case KEY:
+                accept(KEY);
+                break;
+            case COMMENT:
+                //[COMMENT 'string']
+                accept(COMMENT);
+                String str = accept(STRING).value;
+                break;
+            case COLUMN_FORMAT:
+                //[COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT}]
+                accept(COLUMN_FORMAT);
+                acceptOr(FIXED, DYNAMIC, DEFAULT);
+                break;
+            case STORAGE:
+                //[STORAGE {DISK|MEMORY|DEFAULT}]
+                accept(STORAGE);
+                acceptOr(DISK, MEMORY, DEFAULT);
+                break;
+            case REFERENCES:
+                parseReferenceDefinition();
+            default:
+                break;
+        }
+    }
+
+    public void parseDataType() {
+        switch (token().tag) {
+            case BIT:
+                //BIT[(length)]
+                accept(BIT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                break;
+            case TINYINT:
+                //TINYINT[(length)] [UNSIGNED] [ZEROFILL]
+                accept(TINYINT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case SMALLINT:
+                //SMALLINT[(length)] [UNSIGNED] [ZEROFILL]
+                accept(SMALLINT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case MEDIUMINT:
+                //MEDIUMINT[(length)] [UNSIGNED] [ZEROFILL]
+                accept(MEDIUMINT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case INT:
+                //INT[(length)] [UNSIGNED] [ZEROFILL]
+                accept(INT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case INTEGER:
+                //INTEGER[(length)] [UNSIGNED] [ZEROFILL]
+                accept(INTEGER);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case BIGINT:
+                //BIGINT[(length)] [UNSIGNED] [ZEROFILL]
+                accept(BIGINT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case REAL:
+                //REAL[(length,decimals)] [UNSIGNED] [ZEROFILL]
+                accept(REAL);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(COMMA);
+                    String decimals = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case DOUBLE:
+                accept(DOUBLE);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(COMMA);
+                    String decimals = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                //DOUBLE[(length,decimals)] [UNSIGNED] [ZEROFILL]
+                break;
+            case FLOAT:
+                accept(FLOAT);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(COMMA);
+                    String decimals = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                //FLOAT[(length,decimals)] [UNSIGNED] [ZEROFILL]
+                break;
+            case DECIMAL:
+                //DECIMAL[(length[,decimals])] [UNSIGNED] [ZEROFILL]
+                accept(DECIMAL);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    if (token().tag == RPAREN) {
+                        accept(RPAREN);
+                    } else {
+                        accept(COMMA);
+                        String decimals = accept(NUMBER).value;
+                        accept(RPAREN);
+                    }
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case NUMERIC:
+                //NUMERIC[(length[,decimals])] [UNSIGNED] [ZEROFILL]
+                accept(NUMERIC);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    if (token().tag == RPAREN) {
+                        accept(RPAREN);
+                    } else {
+                        accept(COMMA);
+                        String decimals = accept(NUMBER).value;
+                        accept(RPAREN);
+                    }
+                }
+                acceptIf(UNSIGNED);
+                acceptIf(ZEROFILL);
+                break;
+            case DATE:
+                //DATE
+                accept(DATE);
+                break;
+            case TIME:
+                //TIME[(fsp)]
+                accept(TIME);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    parseFsp();
+                    accept(RPAREN);
+                }
+                break;
+            case TIMESTAMP:
+                //TIMESTAMP[(fsp)]
+                accept(TIMESTAMP);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    parseFsp();
+                    accept(RPAREN);
+                }
+                break;
+            case DATETIME:
+                //DATETIME[(fsp)]
+                accept(DATETIME);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    parseFsp();
+                    accept(RPAREN);
+                }
+                break;
+            case YEAR:
+                //YEAR
+                accept(YEAR);
+                break;
+            case CHAR:
+                //CHAR[(length)] [BINARY] [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(CHAR);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(BINARY);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case VARCHAR:
+                //VARCHAR(length) [BINARY] [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(VARCHAR);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                acceptIf(BINARY);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case BINARY:
+                //BINARY[(length)]
+                accept(BINARY);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                break;
+            case VARBINARY:
+                //VARBINARY(length)
+                accept(VARBINARY);
+                if (token().tag == LPAREN) {
+                    accept(LPAREN);
+                    String length = accept(NUMBER).value;
+                    accept(RPAREN);
+                }
+                break;
+            case TINYBLOB:
+                //TINYBLOB
+                accept(TINYBLOB);
+                break;
+            case BLOB:
+                //BLOB
+                accept(BLOB);
+                break;
+            case MEDIUMBLOB:
+                //MEDIUMBLOB
+                accept(MEDIUMBLOB);
+                break;
+            case LONGBLOB:
+                //LONGBLOB
+                accept(LONGBLOB);
+                break;
+            case TINYTEXT:
+                // TINYTEXT [BINARY] [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(TINYTEXT);
+                acceptIf(BINARY);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case TEXT:
+                //TEXT [BINARY] [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(TEXT);
+                acceptIf(BINARY);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case MEDIUMTEXT:
+                //MEDIUMTEXT [BINARY] [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(MEDIUMTEXT);
+                acceptIf(BINARY);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case LONGTEXT:
+                //LONGTEXT [BINARY] [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(LONGTEXT);
+                acceptIf(BINARY);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case ENUM:
+                //ENUM(value1,value2,value3,...) [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(ENUM);
+                accept(LPAREN);
+                List<String> values = new ArrayList<>();
+                do {
+                    values.add(parseValue());
+                } while (tokenIs(COMMA));
+                accept(RPAREN);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            case SET:
+                //SET(value1,value2,value3,...) [CHARACTER SET charset_name] [COLLATE collation_name]
+                accept(SET);
+                accept(LPAREN);
+                values = new ArrayList<>();
+                do {
+                    values.add(parseValue());
+                } while (tokenIs(COMMA));
+                accept(RPAREN);
+                if (token().tag == CHARACTER) {
+                    acceptN(CHARACTER, SET);
+                    String charsetName = accept(IDENT).value;
+                }
+                if (token().tag == COLLATE) {
+                    accept(COLLATE);
+                    String collationName = accept(IDENT).value;
+                }
+                break;
+            default:
+                // TODO don't support spatial_type for now
+                reportSyntaxError("Expected but " + token().tag);
+        }
     }
 
     public void parseReferenceDefinition() {
@@ -86,7 +700,23 @@ public class CreateTableParser extends AbstractParser {
     }
 
     private void parseIndexColName() {
-        //TODO
+        //col_name [(length)] [ASC | DESC]
+        String colName = accept(IDENT).value;
+        switch (token().tag) {
+            case LPAREN:
+                accept(LPAREN);
+                String length = accept(NUMBER).value;
+                accept(RPAREN);
+                break;
+            case ASC:
+                accept(ASC);
+                break;
+            case DESC:
+                accept(DESC);
+                break;
+            default:
+                break;
+        }
     }
 
     private void parseSubpartitionDefinition() {
@@ -294,6 +924,44 @@ public class CreateTableParser extends AbstractParser {
                 // NOP
         }
 
+    }
+
+    public void parseTableOptions() {
+        //table_option [[,] table_option] ...
+        loop:
+        do {
+            parseTableOption();
+            switch (token().tag) {
+                case COMMA:
+                case ENGINE:
+                case AUTO_INCREMENT:
+                case AVG_ROW_LENGTH:
+                case DEFAULT:
+                case CHARACTER:
+                case CHECKSUM:
+                case COLLATE:
+                case COMMENT:
+                case CONNECTION:
+                case DATA:
+                case DELAY_KEY_WRITE:
+                case INDEX:
+                case INSERT_METHOD:
+                case KEY_BLOCK_SIZE:
+                case MAX_ROWS:
+                case MIN_ROWS:
+                case PACK_KEYS:
+                case PASSWORD:
+                case ROW_FORMAT:
+                case STATS_AUTO_RECALC:
+                case STATS_PERSISTENT:
+                case STATS_SAMPLE_PAGES:
+                case TABLESPACE:
+                case UNION:
+                    continue loop;
+                default:
+                    break loop;
+            }
+        } while (true);
     }
 
     public void parseTableOption() {
@@ -506,7 +1174,7 @@ public class CreateTableParser extends AbstractParser {
                         List<String> valueList = new ArrayList<>();
                         do {
                             if (lookahead(COMMA)) {
-                                valueList.add(accept(NUMBER).value);
+                                valueList.add(parseValue());
                             } else {
                                 exprParser.parseExpr();
                             }
@@ -520,11 +1188,12 @@ public class CreateTableParser extends AbstractParser {
                     accept(LPAREN);
                     List<String> valueList = new ArrayList<>();
                     do {
-                        valueList.add(accept(NUMBER).value);
+                        valueList.add(parseValue());
                     } while (tokenIs(COMMA));
                     accept(RPAREN);
                 }
                 break;
+
             case STORAGE:
                 //[[STORAGE] ENGINE [=] engine_name]
                 acceptN(STORAGE, ENGINE);
@@ -588,5 +1257,18 @@ public class CreateTableParser extends AbstractParser {
             default:
                 break;
         }
+    }
+
+    private void parseFsp() {
+        //TODO fsp?
+    }
+
+    private void parseDefaultValue() {
+        //TODO default value
+    }
+
+    private String parseValue() {
+        //TODO 'string'?
+        return accept(NUMBER).value;
     }
 }
