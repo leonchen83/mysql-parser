@@ -2,6 +2,8 @@ package com.moilioncircle.mysql.tokenizer;
 
 import java.util.Optional;
 
+import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
+
 /**
  * Copyright leon
  * <p>
@@ -146,16 +148,6 @@ public class MysqlTokenizer {
                     tag = TokenTag.STRING;
                     next();
                     break loop;
-                case '+':
-                    tag = TokenTag.PLUS;
-                    value.append(current());
-                    next();
-                    break loop;
-                case '-':
-                    tag = TokenTag.MINUS;
-                    value.append(current());
-                    next();
-                    break loop;
                 case '0':
                 case '1':
                 case '2':
@@ -174,30 +166,130 @@ public class MysqlTokenizer {
                         scanFractionNumber();
                         tag = TokenTag.NUMBER;
                     } else {
-                        tag = TokenTag.DOT;
-                        value.append(current());
-                        next();
+                        operator(DOT);
                     }
                     break loop;
                 case ',':
-                    tag = TokenTag.COMMA;
-                    value.append(current());
-                    next();
+                    operator(COMMA);
+                    break loop;
+                case '+':
+                    operator(PLUS);
+                    break loop;
+                case '-':
+                    operator(MINUS);
                     break loop;
                 case '=':
-                    tag = TokenTag.EQUAL;
-                    value.append(current());
-                    next();
+                    operator(EQUAL);
                     break loop;
                 case '(':
-                    tag = TokenTag.LPAREN;
-                    value.append(current());
-                    next();
+                    operator(LPAREN);
                     break loop;
                 case ')':
-                    tag = TokenTag.RPAREN;
-                    value.append(current());
+                    operator(RPAREN);
+                    break loop;
+                case '!':
+                    if (lookahead('=')) {
+                        tag = TokenTag.NOT_EQ;
+                        value.append("!=");
+                        next();
+                        next();
+                    } else {
+                        operator(NOT_OPERATOR);
+                    }
+                    break loop;
+                case '~':
+                    operator(UNARY_BIT);
+                    break loop;
+                case '^':
+                    operator(EOR);
+                    break loop;
+                case '*':
+                    operator(STAR);
+                    break loop;
+                case '/':
+                    operator(SLASH);
+                    break loop;
+                case '%':
+                    operator(REMAINDER);
+                    break loop;
+                case '<':
+                    if (lookahead('<')) {
+                        tag = TokenTag.LTLT;
+                        value.append("<<");
+                        next();
+                        next();
+                    } else if (lookahead('=', '>')) {
+                        tag = TokenTag.LTEQGT;
+                        value.append("<=>");
+                        next();
+                        next();
+                        next();
+                    } else if (lookahead('=')) {
+                        tag = TokenTag.LE;
+                        value.append("<=");
+                        next();
+                        next();
+                    } else if (lookahead('>')) {
+                        tag = TokenTag.LTGT;
+                        value.append("<>");
+                        next();
+                        next();
+                    } else {
+                        tag = TokenTag.LT;
+                        value.append("<");
+                        next();
+                    }
+                    break loop;
+                case '>':
+                    if (lookahead('>')) {
+                        tag = TokenTag.GTGT;
+                        value.append(">>");
+                        next();
+                        next();
+                    } else if (lookahead('=')) {
+                        tag = TokenTag.GE;
+                        value.append(">=");
+                        next();
+                        next();
+                    } else {
+                        tag = TokenTag.GT;
+                        value.append(">");
+                        next();
+                    }
+                    break loop;
+                case '&':
+                    if (lookahead('&')) {
+                        tag = TokenTag.BABA;
+                        value.append("&&");
+                        next();
+                        next();
+                    } else {
+                        tag = TokenTag.BIT_AND;
+                        value.append("&");
+                        next();
+                    }
+                    break loop;
+                case '|':
+                    if (lookahead('|')) {
+                        tag = TokenTag.BOBO;
+                        value.append("||");
+                        next();
+                        next();
+                    } else {
+                        tag = TokenTag.BIT_OR;
+                        value.append("|");
+                        next();
+                    }
+                    break loop;
+                case ':':
                     next();
+                    if (current() == '=') {
+                        tag = TokenTag.COLONASSIGN;
+                        value.append(":=");
+                        next();
+                    } else {
+                        reportLexerError("Expected '=' but " + current());
+                    }
                     break loop;
                 case '\n':
                 case '\b':
@@ -215,6 +307,12 @@ public class MysqlTokenizer {
 
         }
         return new Token(tag, value.toString(), startPos, newPos());
+    }
+
+    private void operator(TokenTag tokenTag) {
+        tag = tokenTag;
+        value.append(current());
+        next();
     }
 
     private void scanBit() {
@@ -460,7 +558,7 @@ public class MysqlTokenizer {
     }
 
     public static void main(String[] args) {
-        String num = "drop TEMPORARY table if exists abc,bcd RESTRICT";
+        String num = "WHEN THEN CASE ELSE NOT OR AND XOR LIKE IS := || <=>>>|||&&&<<<=< >>>=> !==:= ~^+-*/%";
         MysqlTokenizer tokenizer = new MysqlTokenizer(num.toCharArray());
         Token token = tokenizer.nextToken();
         System.out.println(token);
