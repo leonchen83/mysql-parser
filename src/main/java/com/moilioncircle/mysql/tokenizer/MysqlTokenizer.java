@@ -124,6 +124,7 @@ public class MysqlTokenizer {
                     }
                 case 'Y':
                 case 'Z':
+                case '$':
                 case '_':
                     scanIdent();
                     Optional<TokenTag> tagOpt = lookupKeywords(value.toString());
@@ -211,6 +212,9 @@ public class MysqlTokenizer {
                     break loop;
                 case '%':
                     operator(REMAINDER);
+                    break loop;
+                case '?':
+                    operator(PARAM_MARKER);
                     break loop;
                 case '<':
                     if (lookahead('<')) {
@@ -340,7 +344,7 @@ public class MysqlTokenizer {
     private void scanIdent() {
         loop:
         while (true) {
-            if ((current() >= 'a' && current() <= 'z') || (current() >= 'A' && current() <= 'Z') || (current() >= '0' && current() <= '9') || current() == '_') {
+            if ((current() >= 'a' && current() <= 'z') || (current() >= 'A' && current() <= 'Z') || (current() >= '0' && current() <= '9') || current() == '_' || current() == '$') {
                 value.append(current());
                 next();
             } else {

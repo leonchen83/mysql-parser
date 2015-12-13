@@ -1,7 +1,9 @@
 package com.moilioncircle.mysql.tokenizer;
 
-import static com.moilioncircle.mysql.tokenizer.TokenType.KEYWORDS;
+import com.moilioncircle.mysql.parser.Assoc;
 
+import static com.moilioncircle.mysql.tokenizer.TokenType.KEYWORDS;
+import static com.moilioncircle.mysql.parser.Assoc.*;
 /**
  * Copyright leon
  * <p>
@@ -97,13 +99,13 @@ public enum TokenTag {
     CURRENT_TIMESTAMP("CURRENT_TIMESTAMP", KEYWORDS), LOCALTIMESTAMP("LOCALTIMESTAMP", KEYWORDS),
     NOW("NOW", KEYWORDS), LOCALTIME("LOCALTIME", KEYWORDS), CURRENT_DATE("CURRENT_DATE", KEYWORDS),
     CHARSET("CHARSET", KEYWORDS),UNKNOWN("UNKNOWN",KEYWORDS),ANY("ANY",KEYWORDS),SOUNDS("SOUNDS",KEYWORDS),
-    ESCAPE("ESCAPE",KEYWORDS),
+    ESCAPE("ESCAPE",KEYWORDS), PARAM_MARKER("PARAM_MARKER",KEYWORDS),ROW("ROW",KEYWORDS),
     //OPERATORS
     INTERVAL("INTERVAL",KEYWORDS,1000),
     BINARY("BINARY", KEYWORDS,950),COLLATE("COLLATE", KEYWORDS,950),
-    NOT_OPERATOR("!",KEYWORDS,900),
-    UNARY_MINUS("-",KEYWORDS,850),UNARY_BIT("~",KEYWORDS,850),
-    EOR("^",KEYWORDS,800),
+    NOT_OPERATOR("!",KEYWORDS,900,RIGHT),
+    UNARY_MINUS("-",KEYWORDS,850,RIGHT),UNARY_BIT("~",KEYWORDS,850,RIGHT),UNARY_PLUS("+",KEYWORDS,850,RIGHT),
+    EOR("^",KEYWORDS,800,RIGHT),
     STAR("*",KEYWORDS,750),SLASH("/",KEYWORDS,750),REMAINDER("%",KEYWORDS,750),DIV("DIV",KEYWORDS,750),MOD("MOD",KEYWORDS,750),
     MINUS("-", KEYWORDS,700),PLUS("+",KEYWORDS,700),
     LTLT("<<",KEYWORDS,650),GTGT(">>",KEYWORDS,650),
@@ -111,24 +113,35 @@ public enum TokenTag {
     BIT_OR("|",KEYWORDS,550),
     EQUAL("=", KEYWORDS),LTEQGT("<=>",KEYWORDS,500),GE(">=",KEYWORDS,500),GT(">",KEYWORDS,500),LE("<=",KEYWORDS,500),LT("<",KEYWORDS,500),LTGT("<>",KEYWORDS,500),NOT_EQ("!=",KEYWORDS,500),IS("IS",KEYWORDS,500),LIKE("LIKE",KEYWORDS,500),REGEXP("REGEXP",KEYWORDS,500),IN("IN",KEYWORDS,500),
     BETWEEN("BETWEEN",KEYWORDS,450),CASE("CASE",KEYWORDS,450),WHEN("WHEN",KEYWORDS,450),THEN("THEN",KEYWORDS,450),ELSE("ELSE",KEYWORDS,450),
-    NOT("NOT",KEYWORDS,400),
+    NOT("NOT",KEYWORDS,400,RIGHT),
     AND("AND",KEYWORDS,350),BABA("&&",KEYWORDS,350),
     XOR("XOR",KEYWORDS,300),
     OR("OR",KEYWORDS,250),BOBO("||",KEYWORDS,250),
-    ASSIGN("=",KEYWORDS,200),COLONASSIGN(":=",KEYWORDS,200);
+    ASSIGN("=",KEYWORDS,200,RIGHT),COLONASSIGN(":=",KEYWORDS,200,RIGHT);
     public String tagName;
     public TokenType type;
     public int prec;
+    public Assoc assoc;
 
     TokenTag(String tagName, TokenType type) {
         this.tagName = tagName;
         this.type = type;
         this.prec = 0;
+        this.assoc = LEFT;
+
     }
 
     TokenTag(String tagName, TokenType type, int prec) {
         this.tagName = tagName;
         this.type = type;
         this.prec = prec;
+        this.assoc = LEFT;
+    }
+
+    TokenTag(String tagName, TokenType type, int prec,Assoc assoc) {
+        this.tagName = tagName;
+        this.type = type;
+        this.prec = prec;
+        this.assoc = assoc;
     }
 }

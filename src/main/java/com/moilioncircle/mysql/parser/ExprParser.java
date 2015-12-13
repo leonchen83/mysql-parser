@@ -57,8 +57,12 @@ public class ExprParser extends AbstractParser {
     public void parseExpr() {
         switch (token().tag){
             case NOT:
+                accept(NOT);
+                parseExpr();
                 break;
             case BIT_OR:
+                accept(BIT_OR);
+                parseExpr();
                 break;
             default:
                 parseBooleanPrimary();
@@ -66,9 +70,10 @@ public class ExprParser extends AbstractParser {
                     accept(IS);
                     acceptIf(NOT);
                     Token tok = acceptOr(TRUE,FALSE, UNKNOWN);
-                    parseExprRest();
                 }
+                break;
         }
+        parseExprRest();
     }
 
     /**
@@ -222,21 +227,26 @@ public class ExprParser extends AbstractParser {
     public void parsePredicate(){
         parseBitExpr();
         loop:
-        while (true){
-            switch (token().tag){
+        while (true) {
+            switch (token().tag) {
                 case NOT:
                     accept(NOT);
-                    if(token().tag == IN || token().tag == BETWEEN || token().tag == LIKE || token().tag == REGEXP){
+                    if (token().tag == IN || token().tag == BETWEEN || token().tag == LIKE || token().tag == REGEXP) {
                         continue loop;
-                    }else{
-                        reportSyntaxError("Expected but"+token().tag);
+                    } else {
+                        reportSyntaxError("Expected but" + token().tag);
                     }
                 case IN:
                     accept(IN);
                     accept(LPAREN);
-                    parseSubQuery();
+                    if (token().tag == SELECT) {
+                        parseSubQuery();
+                    } else {
+                        do {
+                            parseExpr();
+                        } while (tokenIs(COMMA));
+                    }
                     accept(RPAREN);
-                    //TODO IN (subquery) or IN (expr [, expr] ...)
                     break loop;
                 case BETWEEN:
                     accept(BETWEEN);
@@ -292,21 +302,81 @@ public class ExprParser extends AbstractParser {
      *                       | MOD bit_expr bit_expr'
      *                       | % bit_expr bit_expr'
      *                       | ^ bit_expr bit_expr'
-     *                       | + interval_expr bit_expr'
-     *                       | - interval_expr bit_expr'
      *                       | ε
+     *
+     *
+     *                       | + interval_expr bit_expr' // DON'T SUPPORT
+     *                       | - interval_expr bit_expr' // DON'T SUPPORT
+     *
      */
     public void parseBitExprRest(){
-        //TODO
+        switch (token().tag){
+            case BIT_OR:
+                accept(BIT_OR);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case BIT_AND:
+                accept(BIT_AND);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case LTLT:
+                accept(LTLT);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case PLUS:
+                accept(PLUS);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case MINUS:
+                accept(MINUS);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case STAR:
+                accept(STAR);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case SLASH:
+                accept(SLASH);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case DIV:
+                accept(DIV);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case MOD:
+                accept(MOD);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case REMAINDER:
+                accept(REMAINDER);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            case EOR:
+                accept(EOR);
+                parseBitExpr();
+                parseBitExprRest();
+                break;
+            default:
+                break;
+        }
     }
 
     /**
      * simple_expr=
      *                         literal simple_expr'
-     *                       | identifier [expr] simple_expr'
+     *                       | identifier simple_expr'
      *                       | function_call simple_expr'
      *                       | param_marker simple_expr'
-     *                       | variable simple_expr'
      *                       | + simple_expr simple_expr'
      *                       | - simple_expr simple_expr'
      *                       | ~ simple_expr simple_expr'
@@ -316,12 +386,91 @@ public class ExprParser extends AbstractParser {
      *                       | ROW (expr, expr [, expr] ...) simple_expr'
      *                       | (subquery) simple_expr'
      *                       | EXISTS (subquery) simple_expr'
-     *                       | match_expr simple_expr'
-     *                       | case_expr simple_expr'
-     *                       | interval_expr simple_expr'
+     *
+     *
+     *                       | case_expr simple_expr' // DON'T SUPPORT for now
+     *                       | match_expr simple_expr' // DON'T SUPPORT
+     *                       | interval_expr simple_expr' // DON'T SUPPORT
+     *                       | {identifier expr} simple_expr' // DON'T SUPPORT
+     *                       | variable simple_expr' // DON'T SUPPORT
      */
-    public void parseSimpleExpr(){
-        //TODO
+    public void parseSimpleExpr() {
+        switch (token().tag) {
+            case IDENT:
+                if (lookahead(LPAREN)) {
+                    parseFunctionCall();
+                } else {
+                    String identifier = accept(IDENT).value;
+                }
+                break;
+            case STRING:
+            case NUMBER:
+            case TRUE:
+            case FALSE:
+            case BIT_VALUE:
+            case HEX_VALUE:
+            case NULL:
+                parseLiteral();
+                break;
+            case PARAM_MARKER:
+                accept(PARAM_MARKER);
+                break;
+            case MINUS:
+                accept(MINUS);
+                //实际上是UNARY_MINUS
+                parseSimpleExpr();
+                break;
+            case PLUS:
+                accept(PLUS);
+                //实际上是UNARY_PLUS
+                parseSimpleExpr();
+                break;
+            case NOT_OPERATOR:
+                accept(NOT_OPERATOR);
+                //实际上是UNARY_NOT_OPERATOR
+                parseSimpleExpr();
+                break;
+            case UNARY_BIT:
+                accept(UNARY_BIT);
+                //实际上是UNARY_BIT
+                parseSimpleExpr();
+                break;
+            case BINARY:
+                accept(BINARY);
+                parseSimpleExpr();
+                break;
+            case LPAREN:
+                if(lookahead(SELECT)){
+                    accept(LPAREN);
+                    parseSubQuery();
+                    accept(RPAREN);
+                }else{
+                    accept(LPAREN);
+                    do{
+                        parseExpr();
+                    }while(tokenIs(COMMA));
+                    accept(RPAREN);
+                }
+                break;
+            case ROW:
+                accept(ROW);
+                accept(LPAREN);
+                do{
+                    parseExpr();
+                }while(tokenIs(COMMA));
+                accept(RPAREN);
+                break;
+            case EXISTS:
+                accept(EXISTS);
+                accept(LPAREN);
+                parseSubQuery();
+                accept(RPAREN);
+                break;
+            default:
+                reportSyntaxError("Expected but "+token().tag);
+
+        }
+        parseSimpleExprRest();
     }
 
     /**
@@ -350,5 +499,50 @@ public class ExprParser extends AbstractParser {
 
     private void parseSubQuery() {
         //TODO
+    }
+
+    private void parseLiteral(){
+        switch (token().tag){
+            case STRING:
+                accept(STRING);
+                break;
+            case NUMBER:
+                accept(NUMBER);
+                break;
+            case HEX_VALUE:
+                accept(HEX_VALUE);
+                break;
+            case BIT_VALUE:
+                accept(BIT_VALUE);
+                break;
+            case TRUE:
+                accept(TRUE);
+                break;
+            case FALSE:
+                accept(FALSE);
+                break;
+            case NULL:
+                accept(NULL);
+                break;
+            default:
+                reportSyntaxError("Expected but "+token().tag);
+        }
+    }
+
+    private void parseFunctionCall(){
+        // identifier(expr,expr....)
+        String functionName = accept(IDENT).value;
+        accept(LPAREN);
+        do{
+            parseExpr();
+        }while(tokenIs(COMMA));
+        accept(RPAREN);
+    }
+
+    public static void main(String[] args) {
+        String expr = "abc is not null";
+        MysqlScanner scanner = new MysqlScanner(expr.toCharArray());
+        ExprParser parser = new ExprParser(scanner);
+        parser.parseExpr();
     }
 }
