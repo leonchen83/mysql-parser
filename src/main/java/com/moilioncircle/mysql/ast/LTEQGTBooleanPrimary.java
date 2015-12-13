@@ -1,4 +1,4 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
 
 /**
  * Copyright leon
@@ -17,6 +17,11 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * boolean_primary <=> predicate
+ */
+public class LTEQGTBooleanPrimary extends BooleanPrimary {
+    public BooleanPrimary booleanPrimary;
+    public Predicate predicate;
 }

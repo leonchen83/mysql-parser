@@ -1,4 +1,4 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
 
 /**
  * Copyright leon
@@ -17,6 +17,17 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+import com.moilioncircle.mysql.tokenizer.TokenTag;
+
+/**
+ | + simple_expr
+ | - simple_expr
+ | ~ simple_expr
+ | ! simple_expr
+ | BINARY simple_expr
+ */
+public class UnarySimpleExpr extends SimpleExpr {
+    public TokenTag unaryOp;
+    public SimpleExpr simpleExpr;
 }

@@ -1,4 +1,6 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
+
+import com.moilioncircle.mysql.tokenizer.TokenTag;
 
 /**
  * Copyright leon
@@ -17,6 +19,12 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * boolean_primary comparison_operator predicate
+ */
+public class CompPredicateBooleanPrimary extends BooleanPrimary {
+    public BooleanPrimary booleanPrimary;
+    public Predicate predicate;
+    public TokenTag op;
 }

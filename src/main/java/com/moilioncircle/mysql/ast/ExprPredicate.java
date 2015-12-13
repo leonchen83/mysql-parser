@@ -1,4 +1,4 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
 
 /**
  * Copyright leon
@@ -17,6 +17,14 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+import java.util.List;
+
+/**
+ * bit_expr [NOT] IN (expr [, expr] ...)
+ */
+public class ExprPredicate extends Predicate {
+    public BitExpr bitExpr;
+    public boolean hasNot;
+    public List<Expr> exprList;
 }

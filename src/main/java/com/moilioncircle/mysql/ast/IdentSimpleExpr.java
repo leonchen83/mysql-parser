@@ -1,4 +1,6 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
+
+import com.moilioncircle.mysql.tokenizer.Token;
 
 /**
  * Copyright leon
@@ -17,6 +19,10 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * identifier
+ */
+public class IdentSimpleExpr extends SimpleExpr {
+    public String ident;
 }

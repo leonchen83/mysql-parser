@@ -1,8 +1,5 @@
 package com.moilioncircle.mysql.ast;
 
-import com.moilioncircle.mysql.parser.AbstractParser;
-import com.moilioncircle.mysql.tokenizer.MysqlScanner;
-
 /**
  * Copyright leon
  * <p>
@@ -18,11 +15,14 @@ import com.moilioncircle.mysql.tokenizer.MysqlScanner;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @author leon on 15-12-7
+ * @author leon on 15-12-13
  */
-public class AlterTable extends AbstractParser{
 
-    public AlterTable(MysqlScanner scanner) {
-        super(scanner);
-    }
+import com.moilioncircle.mysql.tokenizer.Token;
+
+/**
+ * literal
+ */
+public class LiteralSimpleExpr extends SimpleExpr {
+    public Token literal;
 }

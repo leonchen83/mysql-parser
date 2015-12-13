@@ -1,5 +1,7 @@
 package com.moilioncircle.mysql.ast;
 
+import com.moilioncircle.mysql.tokenizer.TokenTag;
+
 /**
  * Copyright leon
  * <p>
@@ -15,23 +17,14 @@ package com.moilioncircle.mysql.ast;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @author leon on 15-12-7
+ * @author leon on 15-12-13
  */
-public class Pair {
-    private final String tableName;
-    private final String newTableName;
 
-    private Pair(String tableName, String newTableName) {
-        this.tableName = tableName;
-        this.newTableName = newTableName;
-    }
-
-    public static Pair pair(String tableName, String newTableName) {
-        return new Pair(tableName, newTableName);
-    }
-
-    @Override
-    public String toString() {
-        return tableName+" TO "+newTableName;
-    }
+/**
+ * boolean_primary IS [NOT] {TRUE | FALSE | UNKNOWN}
+ */
+public class BooleanPrimaryExpr extends Expr {
+    public BooleanPrimary booleanPrimary;
+    public boolean hasNot;
+    public TokenTag tokenTag;
 }

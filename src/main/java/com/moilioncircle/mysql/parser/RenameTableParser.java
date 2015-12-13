@@ -1,6 +1,5 @@
 package com.moilioncircle.mysql.parser;
 
-import com.moilioncircle.mysql.ast.RenameTable;
 import com.moilioncircle.mysql.tokenizer.MysqlScanner;
 
 import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
@@ -28,18 +27,15 @@ public class RenameTableParser extends AbstractParser {
         super(scanner);
     }
 
-    public RenameTable parseRenameTable() {
-        RenameTable result = new RenameTable();
+    public void parseRenameTable() {
         accept(RENAME);
         accept(TABLE);
         do {
             String tableName = accept(IDENT).value;
             accept(TO);
             String newTableName = accept(IDENT).value;
-            result.addPair(tableName, newTableName);
         } while (tokenIs(COMMA));
         accept(EOF);
-        return result;
     }
 
 }

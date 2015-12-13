@@ -1,4 +1,6 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
+
+import java.util.List;
 
 /**
  * Copyright leon
@@ -17,6 +19,11 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * function_call
+ */
+public class FunctionCallSimpleExpr extends SimpleExpr{
+    public String functionName;
+    public List<Expr> args;
 }

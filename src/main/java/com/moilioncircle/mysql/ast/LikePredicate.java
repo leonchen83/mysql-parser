@@ -1,4 +1,6 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
+
+import java.util.Optional;
 
 /**
  * Copyright leon
@@ -17,6 +19,9 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+public class LikePredicate extends Predicate {
+    public BitExpr bitExpr;
+    public boolean hasNot;
+    public SimpleExpr simpleExpr;
+    public Optional<SimpleExpr> simpleExprOpt;
 }

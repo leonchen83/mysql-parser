@@ -1,4 +1,4 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
 
 /**
  * Copyright leon
@@ -17,6 +17,11 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * bit_expr SOUNDS LIKE bit_expr
+ */
+public class SoundsLikePredicate extends Predicate {
+    public BitExpr bitExpr;
+    public BitExpr soundsLikeBitExpr;
 }

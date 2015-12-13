@@ -1,6 +1,5 @@
 package com.moilioncircle.mysql.parser;
 
-import com.moilioncircle.mysql.ast.AlterTable;
 import com.moilioncircle.mysql.tokenizer.MysqlScanner;
 
 import java.util.ArrayList;
@@ -33,7 +32,7 @@ public class AlterTableParser extends AbstractParser {
         createTableParser = new CreateTableParser(scanner);
     }
 
-    public AlterTable parseAlterTable() {
+    public void parseAlterTable() {
         accept(ALTER);
         if (token().tag == ONLINE) {
             accept(ONLINE);
@@ -60,7 +59,6 @@ public class AlterTableParser extends AbstractParser {
                     continue loop;
             }
         }
-        return null;
     }
 
     private void parseAlterSpecification() {

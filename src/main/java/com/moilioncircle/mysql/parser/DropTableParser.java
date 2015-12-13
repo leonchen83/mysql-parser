@@ -1,6 +1,5 @@
 package com.moilioncircle.mysql.parser;
 
-import com.moilioncircle.mysql.ast.DropTable;
 import com.moilioncircle.mysql.tokenizer.MysqlScanner;
 
 import java.util.ArrayList;
@@ -31,23 +30,17 @@ public class DropTableParser extends AbstractParser {
         super(scanner);
     }
 
-    public DropTable parseDropTable() {
-        boolean isTemporary = false;
-        boolean ifExists = false;
-        boolean restrict = false;
-        boolean cascade = false;
+    public void parseDropTable() {
         List<String> tables = new ArrayList<>();
 
         accept(DROP);
         if (token().tag == TEMPORARY) {
             accept(TEMPORARY);
-            isTemporary = true;
         }
         accept(TABLE);
         if (token().tag == IF) {
             accept(IF);
             accept(EXISTS);
-            ifExists = true;
         }
         do {
             tables.add(accept(IDENT).value);
@@ -56,15 +49,12 @@ public class DropTableParser extends AbstractParser {
         switch (token().tag) {
             case RESTRICT:
                 accept(RESTRICT);
-                restrict = true;
                 break;
             case CASCADE:
                 accept(CASCADE);
-                cascade = true;
                 break;
         }
         accept(EOF);
-        return new DropTable(isTemporary, ifExists, restrict, cascade, tables);
     }
 
 }

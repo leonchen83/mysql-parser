@@ -1,4 +1,6 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
+
+import com.moilioncircle.mysql.tokenizer.TokenTag;
 
 /**
  * Copyright leon
@@ -17,6 +19,23 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * bit_expr | bit_expr
+ | bit_expr & bit_expr
+ | bit_expr << bit_expr
+ | bit_expr >> bit_expr
+ | bit_expr + bit_expr
+ | bit_expr - bit_expr
+ | bit_expr * bit_expr
+ | bit_expr / bit_expr
+ | bit_expr DIV bit_expr
+ | bit_expr MOD bit_expr
+ | bit_expr % bit_expr
+ | bit_expr ^ bit_expr
+ */
+public class BinaryBitExpr extends BitExpr{
+    public BitExpr left;
+    public TokenTag binaryOp;
+    public BitExpr right;
 }

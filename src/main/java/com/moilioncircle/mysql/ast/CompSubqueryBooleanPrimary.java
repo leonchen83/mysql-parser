@@ -1,4 +1,6 @@
-package com.moilioncircle.mysql.parser;
+package com.moilioncircle.mysql.ast;
+
+import com.moilioncircle.mysql.tokenizer.TokenTag;
 
 /**
  * Copyright leon
@@ -17,6 +19,13 @@ package com.moilioncircle.mysql.parser;
  *
  * @author leon on 15-12-13
  */
-public enum Assoc {
-    LEFT,RIGHT,UN_ASSOC
+
+/**
+ * boolean_primary comparison_operator {ALL | ANY} (subquery)
+ */
+public class CompSubqueryBooleanPrimary extends BooleanPrimary {
+    public BooleanPrimary booleanPrimary;
+    public TokenTag op;
+    public TokenTag allOrAny;
+    public String subQuery;
 }
