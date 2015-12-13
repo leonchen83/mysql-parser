@@ -41,6 +41,9 @@ import static com.moilioncircle.mysql.tokenizer.TokenTag.*;
  * XOR
  * OR, ||
  * = (assignment), :=
+ *
+ * The shunting yard algorithm
+ * [href = http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm ]
  */
 public class ExprParser extends AbstractParser {
 
